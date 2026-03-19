@@ -27,7 +27,9 @@
 | PATCH | `/api/v1/admin/services/:id` | No | admin | Update service |
 | PATCH | `/api/v1/admin/services/:id/status` | No | admin | Activate/deactivate service |
 | DELETE | `/api/v1/admin/services/:id` | No | admin | Delete service |
-| GET | `/api/v1/admin/users` | Bearer | admin | List users (paginated) |
+| POST | `/api/v1/admin/login` | No | admin | Admin login |
+| POST | `/api/v1/admin/logout` | No | admin | Admin logout |
+| GET | `/api/v1/admin/users` | Superadmin Bearer | admin | List users (paginated) |
 | GET | `/api/v1/admin/appointments` | Bearer | admin | List appointments (paginated) |
 | PATCH | `/api/v1/admin/appointments/:id/status` | Bearer | admin | Update appointment status |
 

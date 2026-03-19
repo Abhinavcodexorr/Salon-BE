@@ -36,6 +36,41 @@
       "name": "Admin Panel",
       "item": [
         {
+          "name": "Admin Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "const token = res.data?.token;",
+                  "if (token) {",
+                  "  pm.collectionVariables.set('token', token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"superadmin@admin.com\",\n  \"password\": \"qwerty\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/admin/login"
+          }
+        },
+        {
+          "name": "Admin Logout",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/api/v1/admin/logout"
+          }
+        },
+        {
           "name": "Get Token (Verify OTP)",
           "event": [
             {
