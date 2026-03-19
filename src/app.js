@@ -5,6 +5,7 @@ const userRoutes = require("./routes/user.routes");
 const servicesRoutes = require("./routes/services.routes");
 const appointmentRoutes = require("./routes/appointment.routes");
 const adminRoutes = require("./routes/admin.routes");
+const uploadRoutes = require("./routes/upload.routes");
 const servicesController = require("./controllers/services.controller");
 const { success } = require("./utils/response");
 const { errorHandler } = require("./middleware/errorHandler");
@@ -34,6 +35,7 @@ app.use(`${API_BASE}/users`, userRoutes);
 app.use(`${API_BASE}/services`, servicesRoutes);
 app.use(`${API_BASE}/appointments`, appointmentRoutes);
 app.use(`${API_BASE}/admin`, adminRoutes);
+app.use(`${API_BASE}/upload`, uploadRoutes);
 
 app.use(errorHandler);
 

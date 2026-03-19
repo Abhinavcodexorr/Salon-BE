@@ -10,6 +10,29 @@
   ],
   "item": [
     {
+      "name": "Upload",
+      "item": [
+        {
+          "name": "Upload Image",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/api/v1/upload/image"
+          }
+        }
+      ]
+    },
+    {
       "name": "Admin Panel",
       "item": [
         {

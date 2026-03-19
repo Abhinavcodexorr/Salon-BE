@@ -20,6 +20,7 @@
 | POST | `/api/v1/services/seed` | No | services | Seed services |
 | POST | `/api/v1/appointments` | Optional | appointments | Create appointment |
 | GET | `/api/v1/appointments/my` | Bearer | appointments | Get my appointments |
+| POST | `/api/v1/upload/image` | No | upload | Upload image to S3, returns URL |
 | GET | `/api/v1/admin/services` | No | admin | List services (all/active/deactivated) |
 | GET | `/api/v1/admin/services/:id` | No | admin | Get service by ID |
 | POST | `/api/v1/admin/services` | No | admin | Create service |
