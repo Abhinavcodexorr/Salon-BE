@@ -8,8 +8,10 @@ const appointmentSchema = new mongoose.Schema(
     mobile: { type: String, required: true },
     countryCode: { type: String, default: "+61" },
     service: { type: String, required: true },
+    serviceId: { type: mongoose.Schema.Types.ObjectId, ref: "Service", default: null },
+    duration: { type: Number, default: 30 }, // minutes - from service at booking time
     date: { type: String, required: true },
-    time: { type: String, default: null },
+    time: { type: String, default: null }, // slot start e.g. "09:00", "09:30"
     status: { type: String, default: "pending", enum: ["pending", "confirmed", "completed", "cancelled"] },
     notes: { type: String, default: null },
   },

@@ -32,7 +32,7 @@ async function getServiceById(req, res, next) {
 
 async function createService(req, res, next) {
   try {
-    const { title, description, items, image, alt } = req.body;
+    const { title, description, items, image, alt, duration, availableFrom, availableTo } = req.body;
     if (!title || !description) {
       throw new AppError("Title and description are required", 400);
     }
@@ -42,6 +42,9 @@ async function createService(req, res, next) {
       items: items || [],
       image: image || "",
       alt: alt || "",
+      duration: duration != null ? Number(duration) : 30,
+      availableFrom: availableFrom || "09:00",
+      availableTo: availableTo || "18:00",
       isActive: true,
     });
     success(res, service, "Service created", 201);
@@ -53,7 +56,7 @@ async function createService(req, res, next) {
 async function updateService(req, res, next) {
   try {
     const { id } = req.params;
-    const { title, description, items, image, alt, isActive } = req.body;
+    const { title, description, items, image, alt, isActive, duration, availableFrom, availableTo } = req.body;
 
     const update = {};
     if (title !== undefined) update.title = title;
@@ -62,6 +65,9 @@ async function updateService(req, res, next) {
     if (image !== undefined) update.image = image;
     if (alt !== undefined) update.alt = alt;
     if (typeof isActive === "boolean") update.isActive = isActive;
+    if (duration != null) update.duration = Number(duration);
+    if (availableFrom !== undefined) update.availableFrom = availableFrom;
+    if (availableTo !== undefined) update.availableTo = availableTo;
 
     const service = await Service.findByIdAndUpdate(id, update, { new: true });
     if (!service) throw new AppError("Service not found", 404);
@@ -86,8 +92,9 @@ async function seedServices(req, res, next) {
   try {
     const { services: servicePayload = [] } = req.body || {};
     for (const svc of servicePayload) {
+      const { title, description, items, image, alt, duration, availableFrom, availableTo } = svc;
       await Service.findOneAndUpdate(
-        { title: svc.title },
+        { title: title || svc.title },
         { $setOnInsert: { ...svc, items: svc.items || [], isActive: true } },
         { upsert: true, new: true }
       );
