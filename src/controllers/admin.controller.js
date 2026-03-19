@@ -191,25 +191,6 @@ async function listAppointments(req, res, next) {
   }
 }
 
-async function updateAppointmentStatus(req, res, next) {
-  try {
-    const { id } = req.params;
-    const { status } = req.body;
-    if (!["pending", "confirmed", "completed", "cancelled"].includes(status)) {
-      throw new AppError("Invalid status", 400);
-    }
-    const appointment = await Appointment.findByIdAndUpdate(
-      id,
-      { status },
-      { new: true }
-    );
-    if (!appointment) throw new AppError("Appointment not found", 404);
-    success(res, appointment, "Status updated");
-  } catch (err) {
-    next(err);
-  }
-}
-
 module.exports = {
   listServices,
   getServiceById,
@@ -219,5 +200,4 @@ module.exports = {
   seedServices,
   listUsers,
   listAppointments,
-  updateAppointmentStatus,
 };

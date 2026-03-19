@@ -15,6 +15,5 @@ router.patch("/services/:id", adminController.updateService);
 router.delete("/services/:id", adminController.deleteService);
 router.get("/users", superadminAuth, adminController.listUsers);
 router.get("/appointments", superadminAuth, adminController.listAppointments);
-router.patch("/appointments/:id/status", superadminAuth, adminController.updateAppointmentStatus);
 
 module.exports = router;

@@ -12,7 +12,7 @@ const appointmentSchema = new mongoose.Schema(
     duration: { type: Number, default: 30 }, // minutes - from service at booking time
     date: { type: String, required: true },
     time: { type: String, default: null }, // slot start e.g. "09:00", "09:30"
-    status: { type: String, default: "pending", enum: ["pending", "confirmed", "completed", "cancelled"] },
+    status: { type: String, default: "completed", enum: ["completed", "cancelled"] },
     notes: { type: String, default: null },
   },
   { timestamps: true }
