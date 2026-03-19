@@ -1,0 +1,682 @@
+{
+  "info": {
+    "_postman_id": "6f355570-3ef0-4fa6-8014-0611cdd7c7f2",
+    "name": "Palm Island Website",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "33809274"
+  },
+  "item": [
+    {
+      "name": "Cabin Listing by Date",
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      },
+      "request": {
+        "method": "GET",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"name\": \"Ocean View Deluxe Suite\",\r\n  \"description\": \"A luxurious ocean-facing suite with panoramic views of the Arabian Gulf. Features modern amenities, private balcony, and premium finishes throughout.\",\r\n  \"maxOccupancy\": 4,\r\n  \"adultCapacity\": 4,\r\n  \"childCapacity\": 2,\r\n  \"bedConfiguration\": [\r\n    {\r\n      \"bedType\": \"King\",\r\n      \"quantity\": 1\r\n    },\r\n    {\r\n      \"bedType\": \"Single\",\r\n      \"quantity\": 2\r\n    }\r\n  ],\r\n  \"pricePerNight\": 450,\r\n  \"currency\": \"USD\",\r\n  \"amenities\": [\r\n    \"wifi\",\r\n    \"ocean_view\",\r\n    \"butler_service\",\r\n    \"jacuzzi\",\r\n    \"kitchen\"\r\n  ],\r\n  \"images\": [\r\n    {\r\n      \"url\": \"https://example.com/images/cabin1-main.jpg\",\r\n      \"alt\": \"Main view of Ocean View Deluxe Suite\",\r\n      \"order\": 0\r\n    },\r\n    {\r\n      \"url\": \"https://example.com/images/cabin1-bedroom.jpg\",\r\n      \"alt\": \"Master bedroom with king bed\",\r\n      \"order\": 1\r\n    },\r\n    {\r\n      \"url\": \"https://example.com/images/cabin1-balcony.jpg\",\r\n      \"alt\": \"Private balcony with ocean view\",\r\n      \"order\": 2\r\n    }\r\n  ],\r\n  \"checkInTime\": \"15:00\",\r\n  \"checkOutTime\": \"11:00\",\r\n  \"cabinType\": \"Deluxe\",\r\n  \"size\": 1200,\r\n  \"unit\": \"sqft\",\r\n  \"status\": \"Available\",\r\n  \"features\": {\r\n    \"wifi\": true,\r\n    \"ac\": true,\r\n    \"tv\": true,\r\n    \"balcony\": true,\r\n    \"kitchen\": true,\r\n    \"jacuzzi\": true,\r\n    \"parking\": true,\r\n    \"livingRoom\": true,\r\n    \"diningArea\": true,\r\n    \"pool\": false,\r\n    \"gym\": false,\r\n    \"spa\": false,\r\n    \"oceanView\": true,\r\n    \"mountainView\": false,\r\n    \"gardenView\": false,\r\n    \"butlerService\": true\r\n  },\r\n  \"bookingRules\": {\r\n    \"minimumStay\": 2,\r\n    \"maximumStay\": 14,\r\n    \"advanceBookingDays\": 30,\r\n    \"cancellationPolicy\": \"Moderate\",\r\n    \"cancellationHours\": 48\r\n  },\r\n  \"housekeeping\": {\r\n    \"lastCleaned\": null,\r\n    \"nextCleaning\": null,\r\n    \"cleaningNotes\": \"\",\r\n    \"cleaningDuration\": 3\r\n  },\r\n  \"maintenance\": {\r\n    \"lastMaintenance\": null,\r\n    \"nextMaintenance\": null,\r\n    \"maintenanceNotes\": \"\",\r\n    \"issues\": []\r\n  },\r\n  \"availability\": {\r\n    \"isAvailable\": true,\r\n    \"blockedDates\": []\r\n  },\r\n  \"isActive\": true\r\n}"
+        },
+        "url": {
+          "raw": "https://api.palmislandgh.com/api/v1/cabin/?children=2&adult=2",
+          "protocol": "https",
+          "host": [
+            "api",
+            "palmislandgh",
+            "com"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "cabin",
+            ""
+          ],
+          "query": [
+            {
+              "key": "checkInDate",
+              "value": "2025-10-26",
+              "disabled": true
+            },
+            {
+              "key": "guests",
+              "value": "4",
+              "disabled": true
+            },
+            {
+              "key": "children",
+              "value": "2"
+            },
+            {
+              "key": "adult",
+              "value": "2"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Cabin By Id",
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      },
+      "request": {
+        "method": "GET",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"name\": \"Ocean View Deluxe Suite\",\r\n  \"description\": \"A luxurious ocean-facing suite with panoramic views of the Arabian Gulf. Features modern amenities, private balcony, and premium finishes throughout.\",\r\n  \"maxOccupancy\": 4,\r\n  \"adultCapacity\": 4,\r\n  \"childCapacity\": 2,\r\n  \"bedConfiguration\": [\r\n    {\r\n      \"bedType\": \"King\",\r\n      \"quantity\": 1\r\n    },\r\n    {\r\n      \"bedType\": \"Single\",\r\n      \"quantity\": 2\r\n    }\r\n  ],\r\n  \"pricePerNight\": 450,\r\n  \"currency\": \"USD\",\r\n  \"amenities\": [\r\n    \"wifi\",\r\n    \"ocean_view\",\r\n    \"butler_service\",\r\n    \"jacuzzi\",\r\n    \"kitchen\"\r\n  ],\r\n  \"images\": [\r\n    {\r\n      \"url\": \"https://example.com/images/cabin1-main.jpg\",\r\n      \"alt\": \"Main view of Ocean View Deluxe Suite\",\r\n      \"order\": 0\r\n    },\r\n    {\r\n      \"url\": \"https://example.com/images/cabin1-bedroom.jpg\",\r\n      \"alt\": \"Master bedroom with king bed\",\r\n      \"order\": 1\r\n    },\r\n    {\r\n      \"url\": \"https://example.com/images/cabin1-balcony.jpg\",\r\n      \"alt\": \"Private balcony with ocean view\",\r\n      \"order\": 2\r\n    }\r\n  ],\r\n  \"checkInTime\": \"15:00\",\r\n  \"checkOutTime\": \"11:00\",\r\n  \"cabinType\": \"Deluxe\",\r\n  \"size\": 1200,\r\n  \"unit\": \"sqft\",\r\n  \"status\": \"Available\",\r\n  \"features\": {\r\n    \"wifi\": true,\r\n    \"ac\": true,\r\n    \"tv\": true,\r\n    \"balcony\": true,\r\n    \"kitchen\": true,\r\n    \"jacuzzi\": true,\r\n    \"parking\": true,\r\n    \"livingRoom\": true,\r\n    \"diningArea\": true,\r\n    \"pool\": false,\r\n    \"gym\": false,\r\n    \"spa\": false,\r\n    \"oceanView\": true,\r\n    \"mountainView\": false,\r\n    \"gardenView\": false,\r\n    \"butlerService\": true\r\n  },\r\n  \"bookingRules\": {\r\n    \"minimumStay\": 2,\r\n    \"maximumStay\": 14,\r\n    \"advanceBookingDays\": 30,\r\n    \"cancellationPolicy\": \"Moderate\",\r\n    \"cancellationHours\": 48\r\n  },\r\n  \"housekeeping\": {\r\n    \"lastCleaned\": null,\r\n    \"nextCleaning\": null,\r\n    \"cleaningNotes\": \"\",\r\n    \"cleaningDuration\": 3\r\n  },\r\n  \"maintenance\": {\r\n    \"lastMaintenance\": null,\r\n    \"nextMaintenance\": null,\r\n    \"maintenanceNotes\": \"\",\r\n    \"issues\": []\r\n  },\r\n  \"availability\": {\r\n    \"isAvailable\": true,\r\n    \"blockedDates\": []\r\n  },\r\n  \"isActive\": true\r\n}"
+        },
+        "url": {
+          "raw": "http://65.1.93.105:3002/api/v1/cabin/68f0de4dfbb31b2922a1c14e",
+          "protocol": "http",
+          "host": [
+            "65",
+            "1",
+            "93",
+            "105"
+          ],
+          "port": "3002",
+          "path": [
+            "api",
+            "v1",
+            "cabin",
+            "68f0de4dfbb31b2922a1c14e"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Create Booking",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"cabinId\": \"68fa299999f502d5d1f84fa9\",\r\n  \"checkInDate\": \"2025-11-04\",\r\n  \"checkOutDate\": \"2025-11-05\",\r\n  \"adults\": 2,\r\n  \"children\": 1,\r\n  \"guestDetails\": {\r\n    \"firstName\": \"John\",\r\n    \"lastName\": \"Doe\",\r\n    \"email\": \"abhinav.codexorr@gmail.com\",\r\n    \"mobileNumber\": \"8283941127\",\r\n    \"countryCode\": \"+1\",\r\n    \"address1\": \"123 Main Street\",\r\n    \"address2\": \"Apt 4B\",\r\n    \"townOrCity\": \"New York\",\r\n    \"state\": \"NY\",\r\n    \"country\": \"USA\",\r\n    \"pincode\": \"10001\",\r\n    \"specialRequests\": \"Late check-in requested\"\r\n  },\r\n  \"paymentMethod\": \"Credit Card\",\r\n  \"totalAmount\": 690.00,\r\n  \"currency\": \"USD\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://api.palmislandgh.com/api/v1/booking/",
+          "protocol": "https",
+          "host": [
+            "api",
+            "palmislandgh",
+            "com"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "booking",
+            ""
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Cabin Listing",
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      },
+      "request": {
+        "method": "GET",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"name\": \"Ocean View Deluxe Suite\",\r\n  \"description\": \"A luxurious ocean-facing suite with panoramic views of the Arabian Gulf. Features modern amenities, private balcony, and premium finishes throughout.\",\r\n  \"maxOccupancy\": 4,\r\n  \"adultCapacity\": 4,\r\n  \"childCapacity\": 2,\r\n  \"bedConfiguration\": [\r\n    {\r\n      \"bedType\": \"King\",\r\n      \"quantity\": 1\r\n    },\r\n    {\r\n      \"bedType\": \"Single\",\r\n      \"quantity\": 2\r\n    }\r\n  ],\r\n  \"pricePerNight\": 450,\r\n  \"currency\": \"USD\",\r\n  \"amenities\": [\r\n    \"wifi\",\r\n    \"ocean_view\",\r\n    \"butler_service\",\r\n    \"jacuzzi\",\r\n    \"kitchen\"\r\n  ],\r\n  \"images\": [\r\n    {\r\n      \"url\": \"https://example.com/images/cabin1-main.jpg\",\r\n      \"alt\": \"Main view of Ocean View Deluxe Suite\",\r\n      \"order\": 0\r\n    },\r\n    {\r\n      \"url\": \"https://example.com/images/cabin1-bedroom.jpg\",\r\n      \"alt\": \"Master bedroom with king bed\",\r\n      \"order\": 1\r\n    },\r\n    {\r\n      \"url\": \"https://example.com/images/cabin1-balcony.jpg\",\r\n      \"alt\": \"Private balcony with ocean view\",\r\n      \"order\": 2\r\n    }\r\n  ],\r\n  \"checkInTime\": \"15:00\",\r\n  \"checkOutTime\": \"11:00\",\r\n  \"cabinType\": \"Deluxe\",\r\n  \"size\": 1200,\r\n  \"unit\": \"sqft\",\r\n  \"status\": \"Available\",\r\n  \"features\": {\r\n    \"wifi\": true,\r\n    \"ac\": true,\r\n    \"tv\": true,\r\n    \"balcony\": true,\r\n    \"kitchen\": true,\r\n    \"jacuzzi\": true,\r\n    \"parking\": true,\r\n    \"livingRoom\": true,\r\n    \"diningArea\": true,\r\n    \"pool\": false,\r\n    \"gym\": false,\r\n    \"spa\": false,\r\n    \"oceanView\": true,\r\n    \"mountainView\": false,\r\n    \"gardenView\": false,\r\n    \"butlerService\": true\r\n  },\r\n  \"bookingRules\": {\r\n    \"minimumStay\": 2,\r\n    \"maximumStay\": 14,\r\n    \"advanceBookingDays\": 30,\r\n    \"cancellationPolicy\": \"Moderate\",\r\n    \"cancellationHours\": 48\r\n  },\r\n  \"housekeeping\": {\r\n    \"lastCleaned\": null,\r\n    \"nextCleaning\": null,\r\n    \"cleaningNotes\": \"\",\r\n    \"cleaningDuration\": 3\r\n  },\r\n  \"maintenance\": {\r\n    \"lastMaintenance\": null,\r\n    \"nextMaintenance\": null,\r\n    \"maintenanceNotes\": \"\",\r\n    \"issues\": []\r\n  },\r\n  \"availability\": {\r\n    \"isAvailable\": true,\r\n    \"blockedDates\": []\r\n  },\r\n  \"isActive\": true\r\n}"
+        },
+        "url": {
+          "raw": "http://65.1.93.105:3002/api/v1/cabin/",
+          "protocol": "http",
+          "host": [
+            "65",
+            "1",
+            "93",
+            "105"
+          ],
+          "port": "3002",
+          "path": [
+            "api",
+            "v1",
+            "cabin",
+            ""
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "check cabin avalaibility",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "https://api.palmislandgh.com/api/v1/cabin/68fa299999f502d5d1f84fa0/check-availability?checkInDate=2025-11-01&checkOutDate=2025-11-02&adults&children",
+          "protocol": "https",
+          "host": [
+            "api",
+            "palmislandgh",
+            "com"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "cabin",
+            "68fa299999f502d5d1f84fa0",
+            "check-availability"
+          ],
+          "query": [
+            {
+              "key": "checkInDate",
+              "value": "2025-11-01"
+            },
+            {
+              "key": "checkOutDate",
+              "value": "2025-11-02"
+            },
+            {
+              "key": "adults",
+              "value": null,
+              "type": "text"
+            },
+            {
+              "key": "children",
+              "value": null,
+              "type": "text"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Booking listing",
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      },
+      "request": {
+        "method": "GET",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://api.palmislandgh.com/api/v1/booking/",
+          "protocol": "https",
+          "host": [
+            "api",
+            "palmislandgh",
+            "com"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "booking",
+            ""
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "check payment status",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/x-www-form-urlencoded"
+          },
+          {
+            "key": "Cookie",
+            "value": "PHPSESSID=mmhsg9usr6ku84icj33lmt74oj"
+          }
+        ],
+        "url": {
+          "raw": "https://api.palmislandgh.com/api/v1/booking/confirm?order-id=XKCRNL2G&token=3312696485bf72f1f8.89763768696485bf72f241.721173798662696485bf72",
+          "protocol": "https",
+          "host": [
+            "api",
+            "palmislandgh",
+            "com"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "booking",
+            "confirm"
+          ],
+          "query": [
+            {
+              "key": "order-id",
+              "value": "XKCRNL2G"
+            },
+            {
+              "key": "token",
+              "value": "3312696485bf72f1f8.89763768696485bf72f241.721173798662696485bf72"
+            }
+          ]
+        },
+        "description": "Generated from cURL: curl --location --request POST 'https://sandbox.expresspaygh.com/api/submit.php' \\\n--header 'Content-Type: application/x-www-form-urlencoded' \\\n--header 'Cookie: PHPSESSID=mmhsg9usr6ku84icj33lmt74oj' \\\n--data-urlencode 'merchant-id=429646695599' \\\n--data-urlencode 'api-key=5pt1dpAHJIq83OlqqQBOG-tj6DcL5Pw3pD44pnX1Cb-E2iuI7mNdL9XjMXf1fZU-vZ8bPRBfsRrv1nhp6o6' \\\n--data-urlencode 'currency=GHS' \\\n--data-urlencode 'amount=33.00' \\\n--data-urlencode 'order-id=90bffe561179ed97' \\\n--data-urlencode 'post-url=https://google.com'"
+      },
+      "response": []
+    },
+    {
+      "name": "Contact Us",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"message\":\"Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://api.palmislandgh.com/api/v1/contact/",
+          "protocol": "https",
+          "host": [
+            "api",
+            "palmislandgh",
+            "com"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "contact",
+            ""
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "create booking with package",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"cabinId\": \"6911dc3234f12be0bc94bd4d\",\n  \"checkInDate\": \"2026-08-11\",\n  \"checkOutDate\": \"2026-08-12\",\n  \"adults\": 2,\n  \"children\": 0,\n  \"guestDetails\": {\n    \"firstName\": \"Abhinav\",\n    \"lastName\": \"Sharma\",\n    \"email\": \"abhinav.codexorr@gmail.com\",\n    \"mobileNumber\": \"+233123456789\"\n  },\n  \"paymentMethod\": \"Mobile Money\",\n  \"totalAmount\": 250,\n  \"currency\": \"GHS\",\n  \"package\": [\n    {\n      \"packageId\": \"507f1f77bcf86cd799439012\",\n      \"type\": 0,\n      \"amount\": 50.00,\n      \"currency\": \"USD\"\n    },\n    {\n      \"packageId\": \"507f1f77bcf86cd799439013\",\n      \"type\": 1,\n      \"amount\": 100.00,\n      \"currency\": \"USD\"\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://api.palmislandgh.com/api/v1/booking",
+          "protocol": "https",
+          "host": [
+            "api",
+            "palmislandgh",
+            "com"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "booking"
+          ]
+        },
+        "description": "Generated from cURL: curl -X POST \"https://api.palmislandgh.com/api/v1/booking\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"cabinId\": \"6911dc9b34f12be0bc94bd6d\",\n    \"checkInDate\": \"2026-02-01\",\n    \"checkOutDate\": \"2026-02-05\",\n    \"adults\": 2,\n    \"children\": 0,\n    \"guestDetails\": {\n      \"firstName\": \"John\",\n      \"lastName\": \"Doe\",\n      \"email\": \"john.doe@example.com\",\n      \"mobileNumber\": \"+233123456789\"\n    },\n    \"paymentMethod\": \"Credit Card\",\n    \"totalAmount\": 1000,\n    \"currency\": \"USD\",\n    \"packageId\": \"695bafbd0e2c6862e647faf2\",\n    \"selectedPricing\": {\n      \"type\": \"per_couple\",\n      \"label\": \"Per couple\",\n      \"amount\": 1750,\n      \"currency\": \"GHC\"\n    }\n  }'"
+      },
+      "response": []
+    },
+    {
+      "name": "package listing",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "GET https://api.palmislandgh.com/api/v1/packages?status=Active",
+          "protocol": "GET https",
+          "host": [
+            "api",
+            "palmislandgh",
+            "com"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "packages"
+          ],
+          "query": [
+            {
+              "key": "status",
+              "value": "Active"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "post-url",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "https://api.palmislandgh.com/api/v1/booking/expresspay/callback?order-id=EY9Q9QOS&token=593869674e46d3b572.4660205969674e46d3b5b6.27286860420169674e46d3",
+          "protocol": "https",
+          "host": [
+            "api",
+            "palmislandgh",
+            "com"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "booking",
+            "expresspay",
+            "callback"
+          ],
+          "query": [
+            {
+              "key": "order-id",
+              "value": "EY9Q9QOS"
+            },
+            {
+              "key": "token",
+              "value": "593869674e46d3b572.4660205969674e46d3b5b6.27286860420169674e46d3"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "https://expresspaygh.com/api/submit.php",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/x-www-form-urlencoded"
+          }
+        ],
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {
+              "type": "text",
+              "key": "merchant-id",
+              "value": "465983234802"
+            },
+            {
+              "type": "text",
+              "key": "api-key",
+              "value": "CmJb78vdVHbcGkVfESU85-Um3qDC98dqVDPJAvShOq-ByKNFsXyo5vkuDI46lRL-FncJxkUBZEtkrg0Y4Uk"
+            },
+            {
+              "type": "text",
+              "key": "firstname",
+              "value": "John"
+            },
+            {
+              "type": "text",
+              "key": "lastname",
+              "value": "Doe"
+            },
+            {
+              "type": "text",
+              "key": "email",
+              "value": "john.doe@example.com"
+            },
+            {
+              "type": "text",
+              "key": "phonenumber",
+              "value": "0244444444"
+            },
+            {
+              "type": "text",
+              "key": "currency",
+              "value": "GHS"
+            },
+            {
+              "type": "text",
+              "key": "amount",
+              "value": "250.00"
+            },
+            {
+              "type": "text",
+              "key": "order-id",
+              "value": "9SHK8OT4"
+            },
+            {
+              "type": "text",
+              "key": "order-desc",
+              "value": "Cabin booking 9SHK8OT4"
+            },
+            {
+              "type": "text",
+              "key": "redirect-url",
+              "value": "https://www.palmislandgh.com/thank-you"
+            },
+            {
+              "type": "text",
+              "key": "post-url",
+              "value": "https://api.palmislandgh.com/api/v1/booking/expresspay/callback"
+            }
+          ]
+        },
+        "url": {
+          "raw": "https://expresspaygh.com/api/submit.php",
+          "protocol": "https",
+          "host": [
+            "expresspaygh",
+            "com"
+          ],
+          "path": [
+            "api",
+            "submit.php"
+          ]
+        },
+        "description": "Generated from cURL: curl --location --request POST 'https://expresspaygh.com/api/submit.php' \\\n--header 'Content-Type: application/x-www-form-urlencoded' \\\n--data-urlencode 'merchant-id=465983234802' \\\n--data-urlencode 'api-key=CmJb78vdVHbcGkVfESU85-Um3qDC98dqVDPJAvShOq-ByKNFsXyo5vkuDI46lRL-FncJxkUBZEtkrg0Y4Uk' \\\n--data-urlencode 'firstname=John' \\\n--data-urlencode 'lastname=Doe' \\\n--data-urlencode 'email=john.doe@example.com' \\\n--data-urlencode 'phonenumber=0244444444' \\\n--data-urlencode 'currency=GHS' \\\n--data-urlencode 'amount=250.00' \\\n--data-urlencode 'order-id=9SHK8OT4' \\\n--data-urlencode 'order-desc=Cabin booking 9SHK8OT4' \\\n--data-urlencode 'redirect-url=https://www.palmislandgh.com/thank-you' \\\n--data-urlencode 'post-url=https://api.palmislandgh.com/api/v1/booking/expresspay/callback'"
+      },
+      "response": []
+    },
+    {
+      "name": "Add to Cart",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"cabinId\": \"6911dc3234f12be0bc94bd4d\",\r\n    \"checkInDate\": \"2026-03-20\",\r\n    \"checkOutDate\": \"2026-03-21\",\r\n    // \"cartId\": \"cart_e19W10Yh3XUF\",\r\n    \"adults\": 2,\r\n    \"children\": 0,\r\n    \"cabinAmount\": 250,\r\n    \"currency\": \"GHS\",\r\n    \"packages\": [\r\n        {\r\n            \"packageId\": \"695e314527e7c30e95385cc9\",\r\n            \"type\": 0,\r\n            \"amount\": 50\r\n        }\r\n    ]\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:3002/api/v1/cart/add-cabin",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3002",
+          "path": [
+            "api",
+            "v1",
+            "cart",
+            "add-cabin"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Cart",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3002/api/v1/cart/cart_cdn0mz0zGDYk",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3002",
+          "path": [
+            "api",
+            "v1",
+            "cart",
+            "cart_cdn0mz0zGDYk"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "remove cabin from cart",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"cartId\": \"cart_41hryb0vxC95\",\r\n    \"cartItemId\": \"item_3oWchh5S\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:3002/api/v1/cart/remove-cabin",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3002",
+          "path": [
+            "api",
+            "v1",
+            "cart",
+            "remove-cabin"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Apply promocode",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"cartId\": \"cart_98dh23hd23h\",\r\n  \"promoCode\": \"PALM10\"\r\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3002/api/v1/promo/validate",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3002",
+          "path": [
+            "api",
+            "v1",
+            "promo",
+            "validate"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "List Promocode",
+      "request": {
+        "method": "GET",
+        "header": []
+      },
+      "response": []
+    },
+    {
+      "name": "Get activity",
+      "request": {
+        "method": "GET",
+        "header": []
+      },
+      "response": []
+    },
+    {
+      "name": "Addactivity",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    // \"cabinId\": \"6911dc3234f12be0bc94bd4d\",\r\n    \"checkInDate\": \"2026-03-20\",\r\n    \"checkOutDate\": \"2026-03-21\",\r\n     \"cartId\": \"cart_JgLguSDmyBEx\",\r\n     \"activityId\":\"69b3b0ecb950d23e7f6bfec9\"\r\n    // \"adults\": 2,\r\n    // \"children\": 0,\r\n    // \"cabinAmount\": 250,\r\n    // \"currency\": \"GHS\",\r\n    // \"packages\": [\r\n    //     {\r\n    //         \"packageId\": \"695e314527e7c30e95385cc9\",\r\n    //         \"type\": 0,\r\n    //         \"amount\": 50\r\n    //     }\r\n    // ]\r\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3002/api/v1/activity/add-activity",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3002",
+          "path": [
+            "api",
+            "v1",
+            "activity",
+            "add-activity"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "create booking api",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"cartId\": \"cart_6JSD0uAk35lN\",\r\n    \"checkInDate\": \"2026-02-15T00:00:00.000Z\",\r\n    \"checkOutDate\": \"2026-02-16T00:00:00.000Z\",\r\n    \"paymentMethod\": 2,\r\n    \"currency\": \"GHS\",\r\n    \"guestDetails\": {\r\n        \"firstName\": \"John\",\r\n        \"lastName\": \"Doe\",\r\n        \"email\": \"abhinavsharma9451@gmail.com\",\r\n        \"mobileNumber\": \"0241234567\",\r\n        \"countryCode\": \"+233\",\r\n        \"address1\": \"123 Main St\",\r\n        \"townOrCity\": \"Accra\",\r\n        \"country\": \"Ghana\",\r\n        \"specialRequests\": \"Optional notes\"\r\n    }\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:3002/api/v1/create-booking",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3002",
+          "path": [
+            "api",
+            "v1",
+            "create-booking"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}

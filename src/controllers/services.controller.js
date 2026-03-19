@@ -7,7 +7,7 @@ const { success } = require("../utils/response");
  */
 async function getServices(req, res, next) {
   try {
-    const services = await Service.find({ isActive: true }).sort({ createdAt: 1 }).lean();
+    const services = await Service.find({ isActive: true }).sort({ createdAt: -1 }).lean();
     success(res, services, "Services retrieved successfully");
   } catch (err) {
     next(err);

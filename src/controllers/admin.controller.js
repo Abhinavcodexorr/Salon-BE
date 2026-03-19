@@ -12,7 +12,7 @@ async function listServices(req, res, next) {
     else if (status === "deactivated") filter.isActive = false;
     // status=all or no param: return all (active + deactivated)
 
-    const services = await Service.find(filter).sort({ createdAt: 1 }).lean();
+    const services = await Service.find(filter).sort({ createdAt: -1 }).lean();
     success(res, services, "Services retrieved successfully");
   } catch (err) {
     next(err);
