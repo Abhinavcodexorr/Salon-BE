@@ -8,9 +8,9 @@ router.post("/login", adminAuthController.login);
 router.post("/logout", adminAuthController.logout);
 
 router.get("/services", adminController.listServices);
+router.post("/services/seed", adminController.seedServices);
 router.get("/services/:id", adminController.getServiceById);
 router.post("/services", adminController.createService);
-router.patch("/services/:id/status", adminController.toggleServiceStatus);
 router.patch("/services/:id", adminController.updateService);
 router.delete("/services/:id", adminController.deleteService);
 router.get("/users", superadminAuth, adminController.listUsers);

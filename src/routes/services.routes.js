@@ -2,8 +2,7 @@ const express = require("express");
 const router = express.Router();
 const servicesController = require("../controllers/services.controller");
 
-router.get("/titles", servicesController.getServiceTitles);
+// Website listing - only active, not deleted
 router.get("/", servicesController.getServices);
-router.post("/", servicesController.createService);
 
 module.exports = router;

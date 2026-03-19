@@ -14,6 +14,7 @@ async function findOrCreateUser(mobile, countryCode) {
     user = await User.create({
       mobile: normalizedMobile,
       countryCode,
+      wallet: 100,
     });
   }
 

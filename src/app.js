@@ -6,7 +6,6 @@ const servicesRoutes = require("./routes/services.routes");
 const appointmentRoutes = require("./routes/appointment.routes");
 const adminRoutes = require("./routes/admin.routes");
 const uploadRoutes = require("./routes/upload.routes");
-const servicesController = require("./controllers/services.controller");
 const { success } = require("./utils/response");
 const { errorHandler } = require("./middleware/errorHandler");
 
@@ -28,7 +27,6 @@ app.use(express.json());
 const API_BASE = "/api/v1";
 
 app.get("/health", (req, res) => success(res, { status: "ok" }, "Server is healthy"));
-app.post(`${API_BASE}/services/seed`, servicesController.seedData);
 
 app.use(`${API_BASE}/auth`, authRoutes);
 app.use(`${API_BASE}/users`, userRoutes);

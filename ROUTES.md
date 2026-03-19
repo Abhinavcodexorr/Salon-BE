@@ -6,32 +6,41 @@
 
 ---
 
-## All Routes
+## Services Module (Clean)
 
-| Method | Endpoint | Auth | Module | Description |
-|--------|----------|------|--------|-------------|
-| GET | `/health` | No | - | Health check |
-| POST | `/api/v1/auth/send-otp` | No | auth | Send OTP to phone |
-| POST | `/api/v1/auth/verify-otp` | No | auth | Verify OTP & get JWT |
-| GET | `/api/v1/users/me` | Bearer | users | Get current user profile |
-| GET | `/api/v1/services` | No | services | List services |
-| GET | `/api/v1/services/titles` | No | services | List service titles (dropdown) |
-| POST | `/api/v1/services` | No | services | Create service |
-| POST | `/api/v1/services/seed` | No | services | Seed services |
-| POST | `/api/v1/appointments` | Optional | appointments | Create appointment |
-| GET | `/api/v1/appointments/my` | Bearer | appointments | Get my appointments |
-| POST | `/api/v1/upload/image` | No | upload | Upload image to S3, returns URL |
-| GET | `/api/v1/admin/services` | No | admin | List services (all/active/deactivated) |
-| GET | `/api/v1/admin/services/:id` | No | admin | Get service by ID |
-| POST | `/api/v1/admin/services` | No | admin | Create service |
-| PATCH | `/api/v1/admin/services/:id` | No | admin | Update service |
-| PATCH | `/api/v1/admin/services/:id/status` | No | admin | Activate/deactivate service |
-| DELETE | `/api/v1/admin/services/:id` | No | admin | Delete service |
-| POST | `/api/v1/admin/login` | No | admin | Admin login |
-| POST | `/api/v1/admin/logout` | No | admin | Admin logout |
-| GET | `/api/v1/admin/users` | Superadmin Bearer | admin | List users (paginated) |
-| GET | `/api/v1/admin/appointments` | Bearer | admin | List appointments (paginated) |
-| PATCH | `/api/v1/admin/appointments/:id/status` | Bearer | admin | Update appointment status |
+### Website – Public listing
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/services` | **Website listing** – only active, not deleted |
+
+### Admin – Full CRUD
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/admin/services` | List all (active + inactive) |
+| GET | `/api/v1/admin/services/:id` | Get service by ID |
+| POST | `/api/v1/admin/services` | Add/Create service |
+| PATCH | `/api/v1/admin/services/:id` | Update service (incl. isActive) |
+| DELETE | `/api/v1/admin/services/:id` | Delete service |
+| POST | `/api/v1/admin/services/seed` | Seed services (bulk) |
+
+---
+
+## Other Routes
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/health` | No | Health check |
+| POST | `/api/v1/auth/send-otp` | No | Send OTP |
+| POST | `/api/v1/auth/verify-otp` | No | Verify OTP & get JWT |
+| GET | `/api/v1/users/me` | Bearer | Get user profile |
+| POST | `/api/v1/appointments` | Optional | Create appointment |
+| GET | `/api/v1/appointments/my` | Bearer | My appointments |
+| POST | `/api/v1/upload/image` | No | Upload image to S3 |
+| POST | `/api/v1/admin/login` | No | Admin login |
+| POST | `/api/v1/admin/logout` | No | Admin logout |
+| GET | `/api/v1/admin/users` | Superadmin | List users |
+| GET | `/api/v1/admin/appointments` | Superadmin | List appointments |
+| PATCH | `/api/v1/admin/appointments/:id/status` | Superadmin | Update appointment status |
 
 ---
 
@@ -39,11 +48,3 @@
 
 **Success:** `{ "success": true, "data": {...}, "message": "..." }`  
 **Error:** `{ "success": false, "error": { "code": "...", "message": "..." } }`
-
----
-
-## Postman Import
-
-1. **Import** → Upload `Salon-Backend.postman_collection.json`
-2. Collection variables: `baseUrl` = `http://localhost:4002`, `token` (auto-set after Verify OTP)
-3. Ready to use

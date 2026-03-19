@@ -82,20 +82,17 @@ async function deleteService(req, res, next) {
   }
 }
 
-async function toggleServiceStatus(req, res, next) {
+async function seedServices(req, res, next) {
   try {
-    const { id } = req.params;
-    const { isActive } = req.body;
-    if (typeof isActive !== "boolean") {
-      throw new AppError("isActive must be true or false", 400);
+    const { services: servicePayload = [] } = req.body || {};
+    for (const svc of servicePayload) {
+      await Service.findOneAndUpdate(
+        { title: svc.title },
+        { $setOnInsert: { ...svc, items: svc.items || [], isActive: true } },
+        { upsert: true, new: true }
+      );
     }
-    const service = await Service.findByIdAndUpdate(
-      id,
-      { isActive },
-      { new: true }
-    );
-    if (!service) throw new AppError("Service not found", 404);
-    success(res, service, isActive ? "Service activated" : "Service deactivated");
+    success(res, { count: servicePayload.length }, "Seed completed", 201);
   } catch (err) {
     next(err);
   }
@@ -212,7 +209,7 @@ module.exports = {
   createService,
   updateService,
   deleteService,
-  toggleServiceStatus,
+  seedServices,
   listUsers,
   listAppointments,
   updateAppointmentStatus,

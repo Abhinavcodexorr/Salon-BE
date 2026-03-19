@@ -36,7 +36,7 @@ const seedPayload = {
 
 async function main() {
   console.log(`Seeding via API at ${API_BASE}...`);
-  const res = await fetch(`${API_BASE}/api/v1/services/seed`, {
+  const res = await fetch(`${API_BASE}/api/v1/admin/services/seed`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(seedPayload),
