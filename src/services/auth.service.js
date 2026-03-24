@@ -2,6 +2,7 @@ const User = require("../models/User");
 const jwt = require("jsonwebtoken");
 const config = require("../config");
 const otpService = require("./otp.service");
+const { toPublicUser } = require("../utils/userResponse");
 
 async function findOrCreateUser(mobile, countryCode) {
   const normalizedMobile = mobile.replace(/\D/g, "");
@@ -41,7 +42,7 @@ async function verifyOtpAndLogin(mobile, countryCode, otp) {
   }
   const user = await findOrCreateUser(mobile, countryCode);
   const token = generateToken(user._id.toString());
-  return { token, user };
+  return { token, user: toPublicUser(user) };
 }
 
 module.exports = { sendOtp, verifyOtpAndLogin, findOrCreateUser };
