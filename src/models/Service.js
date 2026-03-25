@@ -11,6 +11,7 @@ const serviceSchema = new mongoose.Schema(
     duration: { type: Number, default: 30 }, // minutes - how long the service takes
     availableFrom: { type: String, default: "09:00" }, // HH:mm - service availability start
     availableTo: { type: String, default: "18:00" }, // HH:mm - service availability end
+    price: { type: Number, default: 0, min: 0 },
   },
   { timestamps: true }
 );
