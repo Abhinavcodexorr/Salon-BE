@@ -1,19 +1,11 @@
 /**
  * Time slot configuration - 30 min intervals.
- * Booking window is salon-wide (not per service). Override with env if needed.
+ * Salon open/close comes from DB (see salonAvailability.service) or env fallback.
  */
 
 const SLOT_INTERVAL = 30; // minutes
 const DEFAULT_START = "09:00";
 const DEFAULT_END = "18:00";
-
-/** HH:mm — same window for all services; services only differ by duration. */
-function getSalonBookingWindow() {
-  return {
-    from: process.env.SALON_AVAILABLE_FROM || DEFAULT_START,
-    to: process.env.SALON_AVAILABLE_TO || DEFAULT_END,
-  };
-}
 
 function parseTimeToMinutes(str) {
   const [h, m] = str.split(":").map(Number);
@@ -64,7 +56,6 @@ module.exports = {
   SLOT_INTERVAL,
   DEFAULT_START,
   DEFAULT_END,
-  getSalonBookingWindow,
   generateSlots,
   parseTimeToMinutes,
   minutesToTimeStr,

@@ -7,8 +7,8 @@ const {
   parseTimeToMinutes,
   getSlotEndMinutes,
   overlaps,
-  getSalonBookingWindow,
 } = require("../config/slots");
+const { resolveSalonBookingWindow } = require("../services/salonAvailability.service");
 
 async function getAvailableSlots(req, res, next) {
   try {
@@ -21,7 +21,7 @@ async function getAvailableSlots(req, res, next) {
     if (!service) throw new AppError("Service not found", 404);
 
     const duration = service.duration || 30;
-    const { from: start, to: end } = getSalonBookingWindow();
+    const { from: start, to: end } = await resolveSalonBookingWindow();
     const allSlots = generateSlots(start, end);
 
     const existingAppointments = await Appointment.find({
@@ -29,9 +29,11 @@ async function getAvailableSlots(req, res, next) {
       status: { $nin: ["cancelled"] },
     }).lean();
 
+    const endMins = parseTimeToMinutes(end);
     const availableSlots = allSlots.filter((slotStr) => {
       const slotStart = parseTimeToMinutes(slotStr);
       const slotEnd = slotStart + duration;
+      if (slotEnd > endMins) return false;
 
       const hasOverlap = existingAppointments.some((apt) => {
         if (!apt.time) return false;
@@ -78,8 +80,14 @@ async function create(req, res, next) {
     }
 
     if (time) {
+      const { from: salonFrom, to: salonTo } = await resolveSalonBookingWindow();
+      const dayStartMins = parseTimeToMinutes(salonFrom);
+      const dayEndMins = parseTimeToMinutes(salonTo);
       const slotStart = parseTimeToMinutes(time);
       const slotEnd = slotStart + duration;
+      if (slotStart < dayStartMins || slotEnd > dayEndMins) {
+        throw new AppError("Selected time is outside salon opening hours.", 400);
+      }
       const existingList = await Appointment.find({
         date,
         status: { $nin: ["cancelled"] },

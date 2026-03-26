@@ -2,10 +2,14 @@ const express = require("express");
 const router = express.Router();
 const adminController = require("../controllers/admin.controller");
 const adminAuthController = require("../controllers/adminAuth.controller");
+const availabilityController = require("../controllers/availability.controller");
 const { superadminAuth } = require("../middleware/auth");
 
 router.post("/login", adminAuthController.login);
 router.post("/logout", adminAuthController.logout);
+
+/** Single salon availability row — create or update each time (timestamps on document). */
+router.put("/availability", superadminAuth, availabilityController.putAvailability);
 
 router.get("/services", adminController.listServices);
 router.post("/services/seed", adminController.seedServices);
