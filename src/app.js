@@ -7,6 +7,7 @@ const appointmentRoutes = require("./routes/appointment.routes");
 const adminRoutes = require("./routes/admin.routes");
 const uploadRoutes = require("./routes/upload.routes");
 const availabilityRoutes = require("./routes/availability.routes");
+const enquiryRoutes = require("./routes/enquiry.routes");
 const { success } = require("./utils/response");
 const { errorHandler } = require("./middleware/errorHandler");
 
@@ -36,6 +37,7 @@ app.use(`${API_BASE}/users`, userRoutes);
 app.use(`${API_BASE}/services`, servicesRoutes);
 app.use(`${API_BASE}/appointments`, appointmentRoutes);
 app.use(`${API_BASE}/availability`, availabilityRoutes);
+app.use(`${API_BASE}/enquiries`, enquiryRoutes);
 app.use(`${API_BASE}/admin`, adminRoutes);
 app.use(`${API_BASE}/upload`, uploadRoutes);
 
