@@ -1,115 +1,67 @@
 # Admin Panel – Slots & Availability Guide
 
-Guidance for the admin panel team to support time slots and service availability.
+Guidance for the admin panel team: **duration is per service**; **booking hours are salon-wide** (same window for every service).
 
 ---
 
-## 1. Service Form Changes
+## 1. Service form (add / edit)
 
-### When **Adding** or **Editing** a service, add these fields:
+| Field | Type | Notes |
+|-------|------|--------|
+| **duration** | number (minutes) | How long the service takes — used for slot length and overlap |
+| **price** | number | Service price |
 
-| Field | Type | Label | Example | Notes |
-|-------|------|-------|---------|-------|
-| **duration** | number (minutes) | Duration | 30, 60, 90 | How long the service takes |
-| **availableFrom** | time (HH:MM) | Available from | 09:00 | Start of availability window |
-| **availableTo** | time (HH:MM) | Available to | 18:00 | End of availability window |
+Do **not** send per-service `availableFrom` / `availableTo` — those are removed from the API.
 
-### API Payload Examples
+### API payload example
 
-**Create Service (POST /api/v1/admin/services):**
+**POST /api/v1/admin/services**
 ```json
 {
   "title": "Hair Styling",
-  "description": "Expert hair styling services...",
-  "items": ["Cut & Styling", "Coloring", "Keratin"],
-  "image": "https://...",
-  "alt": "Hair styling",
+  "description": "…",
+  "items": ["Cut & Styling"],
   "duration": 60,
-  "availableFrom": "09:00",
-  "availableTo": "18:00"
+  "price": 49
 }
 ```
 
-**Update Service (PATCH /api/v1/admin/services/:id):**
-```json
-{
-  "duration": 45,
-  "availableFrom": "10:00",
-  "availableTo": "19:00"
-}
-```
+---
 
-### Defaults (if not sent)
-- **duration:** 30 minutes  
-- **availableFrom:** 09:00  
-- **availableTo:** 18:00  
+## 2. Salon opening hours (backend config)
+
+Slot grid for **all** services uses one window, set on the server:
+
+| Env variable | Example | Meaning |
+|----------------|---------|--------|
+| `SALON_AVAILABLE_FROM` | `09:00` | First possible slot start (HH:mm) |
+| `SALON_AVAILABLE_TO` | `18:00` | End of day (last slot must end before this) |
+
+Defaults: `09:00` → `18:00`. Slot step: **30 minutes** (`src/config/slots.js`).
+
+Change hours by updating **`.env`** on the API host and restarting — not the admin service form.
 
 ---
 
-## 2. Service Listing – Show New Fields
+## 3. Website flow
 
-In the admin services list/table, show:
-
-- **Duration** – e.g. "60 mins", "30 mins"  
-- **Availability** – e.g. "9:00 AM – 6:00 PM"
-
-**API:** `GET /api/v1/admin/services`  
-Each service now includes: `duration`, `availableFrom`, `availableTo`.
+1. User picks **service** and **date**.
+2. `GET /api/v1/appointments/available-slots?date=YYYY-MM-DD&serviceId=<id>`
+3. Backend uses **salon window** + that service’s **duration** + existing bookings to return open times.
+4. User books with `time` set to one of those slots.
 
 ---
 
-## 3. Slot Interval
+## 4. Admin API (services)
 
-- Slots are in **30-minute** steps (9:00, 9:30, 10:00, …).
-- The website booking flow uses these slots.
-- Admins define the **window** (availableFrom, availableTo).  
-  The backend calculates slots inside that window.
-
----
-
-## 4. What the Website Does
-
-1. User selects a **service** and **date**.
-2. Website calls:  
-   `GET /api/v1/appointments/available-slots?date=2025-03-25&serviceId=xxx`
-3. Backend returns available slots for that service and date.
-4. User picks a slot and books.
-
-Admin panel does **not** book directly; it manages services and availability. Booking is on the website.
+| Method | Endpoint | Notes |
+|--------|----------|--------|
+| GET | `/api/v1/admin/services` | List services (`duration`, `price`, no per-service hours) |
+| PATCH | `/api/v1/admin/services/:id` | Update `duration`, `price`, etc. |
 
 ---
 
-## 5. Summary for Admin Panel
+## 5. UI suggestions
 
-| Action | Changes |
-|--------|---------|
-| **Add Service** | Add `duration`, `availableFrom`, `availableTo` fields |
-| **Edit Service** | Include `duration`, `availableFrom`, `availableTo` in the form |
-| **Service List** | Display duration and availability |
-| **Booking** | Not needed in admin; handled on website |
-
----
-
-## 6. API Reference (Admin)
-
-| Method | Endpoint | Purpose |
-|--------|----------|---------|
-| GET | `/api/v1/admin/services` | List services (includes duration, availability) |
-| GET | `/api/v1/admin/services/:id` | Get one service (includes duration, availability) |
-| POST | `/api/v1/admin/services` | Create service (send duration, availableFrom, availableTo) |
-| PATCH | `/api/v1/admin/services/:id` | Update service (can update duration, availableFrom, availableTo) |
-
----
-
-## 7. UI Suggestions
-
-**Add Service Form:**
-```
-Duration (minutes): [30] [60] [90] or input
-Available from:     [09:00]
-Available to:       [18:00]
-```
-
-**Edit Service:** Same fields, pre-filled from existing service.
-
-**Service Table:** Extra columns: "Duration" and "Available (From–To)".
+- **Service form:** duration (minutes), price; remove “available from / to” if you had them.
+- **Settings / docs for ops:** mention that salon hours are env-based on the API server.

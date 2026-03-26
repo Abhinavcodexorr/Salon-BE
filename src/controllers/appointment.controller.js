@@ -2,7 +2,13 @@ const Appointment = require("../models/Appointment");
 const Service = require("../models/Service");
 const { AppError } = require("../middleware/errorHandler");
 const { success } = require("../utils/response");
-const { generateSlots, parseTimeToMinutes, getSlotEndMinutes, overlaps } = require("../config/slots");
+const {
+  generateSlots,
+  parseTimeToMinutes,
+  getSlotEndMinutes,
+  overlaps,
+  getSalonBookingWindow,
+} = require("../config/slots");
 
 async function getAvailableSlots(req, res, next) {
   try {
@@ -15,9 +21,7 @@ async function getAvailableSlots(req, res, next) {
     if (!service) throw new AppError("Service not found", 404);
 
     const duration = service.duration || 30;
-    const start = service.availableFrom || "09:00";
-    const end = service.availableTo || "18:00";
-
+    const { from: start, to: end } = getSalonBookingWindow();
     const allSlots = generateSlots(start, end);
 
     const existingAppointments = await Appointment.find({

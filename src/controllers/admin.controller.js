@@ -32,7 +32,7 @@ async function getServiceById(req, res, next) {
 
 async function createService(req, res, next) {
   try {
-    const { title, description, items, image, alt, duration, availableFrom, availableTo, price } = req.body;
+    const { title, description, items, image, alt, duration, price } = req.body;
     if (!title || !description) {
       throw new AppError("Title and description are required", 400);
     }
@@ -43,8 +43,6 @@ async function createService(req, res, next) {
       image: image || "",
       alt: alt || "",
       duration: duration != null ? Number(duration) : 30,
-      availableFrom: availableFrom || "09:00",
-      availableTo: availableTo || "18:00",
       price: price != null && price !== "" ? Math.max(0, Number(price)) : 0,
       isActive: true,
     });
@@ -57,7 +55,7 @@ async function createService(req, res, next) {
 async function updateService(req, res, next) {
   try {
     const { id } = req.params;
-    const { title, description, items, image, alt, isActive, duration, availableFrom, availableTo, price } = req.body;
+    const { title, description, items, image, alt, isActive, duration, price } = req.body;
 
     const update = {};
     if (title !== undefined) update.title = title;
@@ -67,8 +65,6 @@ async function updateService(req, res, next) {
     if (alt !== undefined) update.alt = alt;
     if (typeof isActive === "boolean") update.isActive = isActive;
     if (duration != null) update.duration = Number(duration);
-    if (availableFrom !== undefined) update.availableFrom = availableFrom;
-    if (availableTo !== undefined) update.availableTo = availableTo;
     if (price !== undefined) update.price = Math.max(0, Number(price) || 0);
 
     const service = await Service.findByIdAndUpdate(id, update, { new: true });
@@ -94,7 +90,7 @@ async function seedServices(req, res, next) {
   try {
     const { services: servicePayload = [] } = req.body || {};
     for (const svc of servicePayload) {
-      const { title, description, items, image, alt, duration, availableFrom, availableTo, price } = svc;
+      const { title, description, items, image, alt, duration, price } = svc;
       const priceNum = price != null && price !== "" ? Math.max(0, Number(price)) : 0;
       await Service.findOneAndUpdate(
         { title: title || svc.title },
