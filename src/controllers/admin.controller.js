@@ -33,9 +33,7 @@ async function getServiceById(req, res, next) {
 async function createService(req, res, next) {
   try {
     const { title, description, items, image, alt, duration, price } = req.body;
-    if (!title || !description) {
-      throw new AppError("Title and description are required", 400);
-    }
+   
     const service = await Service.create({
       title,
       description,
