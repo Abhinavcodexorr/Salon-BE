@@ -204,15 +204,27 @@ async function listAppointments(req, res, next) {
       ];
     }
 
-    const [appointments, total] = await Promise.all([
+    const [raw, total] = await Promise.all([
       Appointment.find(filter)
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(parseInt(limit))
-        .populate("userId", "mobile countryCode name")
+        .populate("userId", "mobile countryCode name email wallet")
         .lean(),
       Appointment.countDocuments(filter),
     ]);
+
+    const appointments = raw.map((a) => {
+      if (!a.userId || typeof a.userId !== "object") return a;
+      const w = a.userId.wallet;
+      return {
+        ...a,
+        userId: {
+          ...a.userId,
+          wallet: w != null && w !== "" ? Number(w) : 0,
+        },
+      };
+    });
 
     success(res, {
       appointments,
