@@ -17,21 +17,29 @@ async function getMe(req, res, next) {
         .sort({ createdAt: -1 })
         .limit(limit)
         .select("type amount balanceBefore balanceAfter note appointmentId createdAt")
+        .populate("appointmentId", "service date time")
         .lean(),
     ]);
 
     if (!user) throw new AppError("User not found", 404);
 
-    const walletHistory = adjustments.map((a) => ({
-      _id: a._id,
-      type: a.type,
-      amount: a.amount,
-      balanceBefore: a.balanceBefore,
-      balanceAfter: a.balanceAfter,
-      note: a.note,
-      appointmentId: a.appointmentId,
-      createdAt: a.createdAt,
-    }));
+    const walletHistory = adjustments.map((a) => {
+      const apt = a.appointmentId;
+      const hasApt = apt && typeof apt === "object";
+      return {
+        _id: a._id,
+        type: a.type,
+        amount: a.amount,
+        balanceBefore: a.balanceBefore,
+        balanceAfter: a.balanceAfter,
+        note: a.note,
+        appointmentId: hasApt ? apt._id : a.appointmentId,
+        appointmentName: hasApt ? apt.service : null,
+        appointmentDate: hasApt ? apt.date : null,
+        appointmentTime: hasApt ? apt.time : null,
+        createdAt: a.createdAt,
+      };
+    });
 
     success(
       res,
