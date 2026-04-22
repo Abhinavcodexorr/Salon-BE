@@ -4,6 +4,7 @@ const adminController = require("../controllers/admin.controller");
 const adminAuthController = require("../controllers/adminAuth.controller");
 const availabilityController = require("../controllers/availability.controller");
 const enquiryController = require("../controllers/enquiry.controller");
+const walletAdjustmentController = require("../controllers/walletAdjustment.controller");
 const { superadminAuth } = require("../middleware/auth");
 
 router.post("/login", adminAuthController.login);
@@ -22,6 +23,16 @@ router.get("/users", superadminAuth, adminController.listUsers);
 /** Same as GET /users — customer accounts (OTP users) with wallet; use for “Customers” screen. */
 router.get("/customers", superadminAuth, adminController.listUsers);
 router.get("/appointments", superadminAuth, adminController.listAppointments);
+router.get(
+  "/appointments/:appointmentId/wallet",
+  superadminAuth,
+  walletAdjustmentController.getWalletByAppointmentId
+);
+router.post(
+  "/appointments/:appointmentId/wallet/adjust",
+  superadminAuth,
+  walletAdjustmentController.adjustWalletByAppointmentId
+);
 router.get("/enquiries", superadminAuth, enquiryController.listEnquiries);
 
 module.exports = router;
