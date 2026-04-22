@@ -1,5 +1,6 @@
 const Appointment = require("../models/Appointment");
 const Service = require("../models/Service");
+const User = require("../models/User");
 const { AppError } = require("../middleware/errorHandler");
 const { success } = require("../utils/response");
 const {
@@ -119,6 +120,15 @@ async function create(req, res, next) {
       duration,
       notes: notes || null,
     });
+
+    if (req.userId) {
+      const nm = String(name).trim();
+      const em = String(email).trim().toLowerCase();
+      await User.findByIdAndUpdate(req.userId, {
+        $set: { name: nm, email: em },
+      });
+    }
+
     success(res, appointment, "Appointment created", 201);
   } catch (err) {
     next(err);

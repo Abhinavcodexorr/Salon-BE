@@ -134,17 +134,42 @@ async function listUsers(req, res, next) {
         .limit(parseInt(limit))
         .lean()
         .then(async (users) => {
-          const withCount = await Promise.all(
-            users.map(async (u) => {
-              const count = await Appointment.countDocuments({ userId: u._id });
-              return {
-                ...u,
-                wallet: u.wallet != null && u.wallet !== "" ? Number(u.wallet) : 0,
-                _count: { appointments: count },
-              };
-            })
+          if (users.length === 0) return [];
+          const userIds = users.map((u) => u._id);
+          const [latestByUser, withCount] = await Promise.all([
+            Appointment.aggregate([
+              { $match: { userId: { $in: userIds } } },
+              { $sort: { createdAt: -1 } },
+              {
+                $group: {
+                  _id: "$userId",
+                  name: { $first: "$name" },
+                  email: { $first: "$email" },
+                },
+              },
+            ]),
+            Promise.all(
+              users.map(async (u) => {
+                const count = await Appointment.countDocuments({ userId: u._id });
+                return count;
+              })
+            ),
+          ]);
+          const aptInfo = new Map(
+            latestByUser.map((row) => [String(row._id), { name: row.name, email: row.email }])
           );
-          return withCount;
+          return users.map((u, i) => {
+            const fromApt = aptInfo.get(String(u._id));
+            const profileName = u.name && String(u.name).trim();
+            const profileEmail = u.email && String(u.email).trim();
+            return {
+              ...u,
+              name: profileName || (fromApt?.name && String(fromApt.name).trim()) || null,
+              email: profileEmail || (fromApt?.email && String(fromApt.email).trim().toLowerCase()) || null,
+              wallet: u.wallet != null && u.wallet !== "" ? Number(u.wallet) : 0,
+              _count: { appointments: withCount[i] },
+            };
+          });
         }),
       User.countDocuments(filter),
     ]);
