@@ -9,6 +9,13 @@ function toWallet(n) {
   return Number(n);
 }
 
+/** Raw ObjectId of the user on an appointment (works if userId is populated or not). */
+function resolveUserId(appointment) {
+  const ref = appointment.userId;
+  if (ref == null) return null;
+  return ref && typeof ref === "object" && ref._id != null ? ref._id : ref;
+}
+
 /**
  * GET — load customer wallet + full adjustment history for the user linked to this appointment.
  * Used when opening the appointment wallet popup.
@@ -68,8 +75,9 @@ async function getWalletByAppointmentId(req, res, next) {
 }
 
 /**
- * POST — credit or debit. Debit amount must be less than or equal to current wallet.
- * Works on standalone MongoDB (no replica set) — no multi-document transactions.
+ * POST — credit or debit on the customer’s real account: `User` document, field `wallet`
+ * (same balance as after OTP login / app wallet — not a separate “shadow” balance).
+ * Debit uses atomic $inc so the DB enforces “cannot take more than on file”.
  * Body: { "type": "credit" | "debit", "amount": number, "note": optional string }
  */
 async function adjustWalletByAppointmentId(req, res, next) {
@@ -87,31 +95,43 @@ async function adjustWalletByAppointmentId(req, res, next) {
 
     const appointment = await Appointment.findById(appointmentId);
     if (!appointment) throw new AppError("Appointment not found", 404);
-    if (!appointment.userId) {
+
+    const userId = resolveUserId(appointment);
+    if (!userId) {
       throw new AppError("This appointment has no linked customer (guest).", 400);
     }
 
-    const userId = appointment.userId;
-    const user = await User.findById(userId);
-    if (!user) throw new AppError("User not found", 404);
-
-    const balanceBefore = toWallet(user.wallet);
-
-    if (type === "debit" && amt > balanceBefore) {
-      throw new AppError(
-        `Debit amount cannot exceed current wallet balance ($${balanceBefore.toFixed(2)}).`,
-        400
+    let updated;
+    if (type === "debit") {
+      // Same `users` collection + `wallet` as everywhere else: deduct only if balance >= amount
+      updated = await User.findOneAndUpdate(
+        { _id: userId, wallet: { $gte: amt } },
+        { $inc: { wallet: -amt } },
+        { new: true, runValidators: true }
       );
+      if (!updated) {
+        const u = await User.findById(userId);
+        if (!u) throw new AppError("User not found", 404);
+        throw new AppError(
+          `Debit amount cannot exceed current wallet balance ($${toWallet(u.wallet).toFixed(2)}).`,
+          400
+        );
+      }
+    } else {
+      updated = await User.findByIdAndUpdate(
+        userId,
+        { $inc: { wallet: amt } },
+        { new: true, runValidators: true }
+      );
+      if (!updated) throw new AppError("User not found", 404);
     }
 
-    const balanceAfter =
-      type === "credit" ? balanceBefore + amt : balanceBefore - amt;
-
-    await User.findByIdAndUpdate(userId, { $set: { wallet: balanceAfter } });
+    const balanceAfter = toWallet(updated.wallet);
+    const balanceBefore = type === "debit" ? balanceAfter + amt : balanceAfter - amt;
 
     try {
       const log = await WalletAdjustment.create({
-        userId: user._id,
+        userId: updated._id,
         appointmentId: appointment._id,
         type,
         amount: amt,
@@ -125,7 +145,7 @@ async function adjustWalletByAppointmentId(req, res, next) {
         res,
         {
           user: {
-            _id: user._id,
+            _id: updated._id,
             wallet: balanceAfter,
           },
           adjustment: {
@@ -142,7 +162,11 @@ async function adjustWalletByAppointmentId(req, res, next) {
         200
       );
     } catch (logErr) {
-      await User.findByIdAndUpdate(userId, { $set: { wallet: balanceBefore } });
+      if (type === "debit") {
+        await User.findByIdAndUpdate(userId, { $inc: { wallet: amt } });
+      } else {
+        await User.findByIdAndUpdate(userId, { $inc: { wallet: -amt } });
+      }
       next(logErr);
     }
   } catch (err) {
