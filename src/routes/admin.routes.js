@@ -19,6 +19,8 @@ router.post("/services", adminController.createService);
 router.patch("/services/:id", adminController.updateService);
 router.delete("/services/:id", adminController.deleteService);
 router.get("/users", superadminAuth, adminController.listUsers);
+/** Same as GET /users — customer accounts (OTP users) with wallet; use for “Customers” screen. */
+router.get("/customers", superadminAuth, adminController.listUsers);
 router.get("/appointments", superadminAuth, adminController.listAppointments);
 router.get("/enquiries", superadminAuth, enquiryController.listEnquiries);
 

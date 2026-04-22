@@ -111,7 +111,7 @@ async function seedServices(req, res, next) {
 
 async function listUsers(req, res, next) {
   try {
-    const { page = 1, limit = 20, search } = req.query;
+    const { page = 1, limit = 20, search, minWallet } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
     const filter = {};
@@ -121,6 +121,10 @@ async function listUsers(req, res, next) {
         { name: new RegExp(search, "i") },
         { email: new RegExp(search, "i") },
       ];
+    }
+    if (minWallet != null && minWallet !== "") {
+      const n = Math.max(0, Number(minWallet));
+      if (!Number.isNaN(n)) filter.wallet = { $gte: n };
     }
 
     const [users, total] = await Promise.all([
@@ -133,7 +137,11 @@ async function listUsers(req, res, next) {
           const withCount = await Promise.all(
             users.map(async (u) => {
               const count = await Appointment.countDocuments({ userId: u._id });
-              return { ...u, _count: { appointments: count } };
+              return {
+                ...u,
+                wallet: u.wallet != null && u.wallet !== "" ? Number(u.wallet) : 0,
+                _count: { appointments: count },
+              };
             })
           );
           return withCount;
