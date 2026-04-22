@@ -1,4 +1,3 @@
-const mongoose = require("mongoose");
 const Appointment = require("../models/Appointment");
 const User = require("../models/User");
 const WalletAdjustment = require("../models/WalletAdjustment");
@@ -70,11 +69,10 @@ async function getWalletByAppointmentId(req, res, next) {
 
 /**
  * POST — credit or debit. Debit amount must be less than or equal to current wallet.
+ * Works on standalone MongoDB (no replica set) — no multi-document transactions.
  * Body: { "type": "credit" | "debit", "amount": number, "note": optional string }
  */
 async function adjustWalletByAppointmentId(req, res, next) {
-  const session = await mongoose.startSession();
-  session.startTransaction();
   try {
     const { appointmentId } = req.params;
     const { type, amount, note } = req.body || {};
@@ -87,13 +85,14 @@ async function adjustWalletByAppointmentId(req, res, next) {
       throw new AppError("amount must be a positive number", 400);
     }
 
-    const appointment = await Appointment.findById(appointmentId).session(session);
+    const appointment = await Appointment.findById(appointmentId);
     if (!appointment) throw new AppError("Appointment not found", 404);
     if (!appointment.userId) {
       throw new AppError("This appointment has no linked customer (guest).", 400);
     }
 
-    const user = await User.findById(appointment.userId).session(session);
+    const userId = appointment.userId;
+    const user = await User.findById(userId);
     if (!user) throw new AppError("User not found", 404);
 
     const balanceBefore = toWallet(user.wallet);
@@ -108,52 +107,46 @@ async function adjustWalletByAppointmentId(req, res, next) {
     const balanceAfter =
       type === "credit" ? balanceBefore + amt : balanceBefore - amt;
 
-    user.wallet = balanceAfter;
-    await user.save({ session });
+    await User.findByIdAndUpdate(userId, { $set: { wallet: balanceAfter } });
 
-    const [log] = await WalletAdjustment.create(
-      [
+    try {
+      const log = await WalletAdjustment.create({
+        userId: user._id,
+        appointmentId: appointment._id,
+        type,
+        amount: amt,
+        balanceBefore,
+        balanceAfter,
+        note: note != null && String(note).trim() ? String(note).trim() : null,
+        adminId: req.adminId || null,
+      });
+
+      success(
+        res,
         {
-          userId: user._id,
-          appointmentId: appointment._id,
-          type,
-          amount: amt,
-          balanceBefore,
-          balanceAfter,
-          note: note != null && String(note).trim() ? String(note).trim() : null,
-          adminId: req.adminId || null,
+          user: {
+            _id: user._id,
+            wallet: balanceAfter,
+          },
+          adjustment: {
+            _id: log._id,
+            type: log.type,
+            amount: log.amount,
+            balanceBefore: log.balanceBefore,
+            balanceAfter: log.balanceAfter,
+            note: log.note,
+            createdAt: log.createdAt,
+          },
         },
-      ],
-      { session }
-    );
-
-    await session.commitTransaction();
-
-    success(
-      res,
-      {
-        user: {
-          _id: user._id,
-          wallet: balanceAfter,
-        },
-        adjustment: {
-          _id: log._id,
-          type: log.type,
-          amount: log.amount,
-          balanceBefore: log.balanceBefore,
-          balanceAfter: log.balanceAfter,
-          note: log.note,
-          createdAt: log.createdAt,
-        },
-      },
-      "Wallet adjusted successfully",
-      200
-    );
+        "Wallet adjusted successfully",
+        200
+      );
+    } catch (logErr) {
+      await User.findByIdAndUpdate(userId, { $set: { wallet: balanceBefore } });
+      next(logErr);
+    }
   } catch (err) {
-    await session.abortTransaction();
     next(err);
-  } finally {
-    session.endSession();
   }
 }
 
