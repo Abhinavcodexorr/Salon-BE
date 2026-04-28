@@ -5,7 +5,6 @@ const { auth, optionalAuth } = require("../middleware/auth");
 
 router.get("/available-slots", appointmentController.getAvailableSlots);
 router.post("/", optionalAuth, appointmentController.create);
-router.get("/counts", appointmentController.getCounts);
 router.get("/my", auth, appointmentController.getMyAppointments);
 
 module.exports = router;

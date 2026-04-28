@@ -1,5 +1,6 @@
 const User = require("../models/User");
 const Appointment = require("../models/Appointment");
+const Notification = require("../models/Notification");
 const Service = require("../models/Service");
 const { AppError } = require("../middleware/errorHandler");
 const { success } = require("../utils/response");
@@ -188,6 +189,27 @@ async function listUsers(req, res, next) {
   }
 }
 
+/** Dashboard badges: total appointments + unread in-app notifications (customer app). Admin token only. */
+async function getDashboardCounts(req, res, next) {
+  try {
+    const [appointmentsCount, notificationCount] = await Promise.all([
+      Appointment.countDocuments({}),
+      Notification.countDocuments({ read: false }),
+    ]);
+    success(
+      res,
+      {
+        appointmentsCount,
+        appointmentCount: appointmentsCount,
+        notificationCount,
+      },
+      "Counts retrieved successfully"
+    );
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function listAppointments(req, res, next) {
   try {
     const { page = 1, limit = 20, status, search } = req.query;
@@ -249,4 +271,5 @@ module.exports = {
   seedServices,
   listUsers,
   listAppointments,
+  getDashboardCounts,
 };
