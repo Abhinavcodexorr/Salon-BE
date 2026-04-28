@@ -161,7 +161,7 @@ async function create(req, res, next) {
 async function getMyAppointments(req, res, next) {
   try {
     const user = await User.findById(req.userId).select("mobile countryCode").lean();
-    if (!user) throw new AppError("User not found", 404);
+    if (!user) throw new AppError("Session invalid — please log in again", 401);
 
     const appointments = await Appointment.find(buildMyAppointmentsFilter(user))
       .sort({ createdAt: -1 })
@@ -178,7 +178,7 @@ async function getMyAppointments(req, res, next) {
 async function getCounts(req, res, next) {
   try {
     const user = await User.findById(req.userId).select("mobile countryCode").lean();
-    if (!user) throw new AppError("User not found", 404);
+    if (!user) throw new AppError("Session invalid — please log in again", 401);
 
     const [appointmentsCount, notificationCount] = await Promise.all([
       Appointment.countDocuments(buildMyAppointmentsFilter(user)),

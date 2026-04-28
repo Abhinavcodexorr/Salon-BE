@@ -1,5 +1,18 @@
 const jwt = require("jsonwebtoken");
+const mongoose = require("mongoose");
 const config = require("../config");
+
+function unauthorizedPayload(message, detail) {
+  return {
+    success: false,
+    statusCode: 401,
+    message,
+    error: {
+      code: "ERR_UNAUTHORIZED",
+      message: detail || message,
+    },
+  };
+}
 
 const auth = (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -9,7 +22,22 @@ const auth = (req, res, next) => {
   const token = authHeader.split(" ")[1];
   try {
     const decoded = jwt.verify(token, config.jwtSecret);
-    req.userId = decoded.userId;
+    const raw = decoded.userId;
+    if (raw == null || raw === "") {
+      return res.status(401).json(
+        unauthorizedPayload(
+          "Customer login token required",
+          "This token is not a customer session (e.g. admin login uses a different token). Use OTP login for customer APIs."
+        )
+      );
+    }
+    const uid = String(raw).trim();
+    if (!mongoose.Types.ObjectId.isValid(uid)) {
+      return res.status(401).json(
+        unauthorizedPayload("Invalid session", "Invalid user id in token")
+      );
+    }
+    req.userId = uid;
     next();
   } catch (err) {
     return res.status(401).json({ error: "Invalid or expired token" });
