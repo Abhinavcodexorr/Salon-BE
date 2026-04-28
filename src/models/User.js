@@ -7,6 +7,11 @@ const userSchema = new mongoose.Schema(
     name: { type: String, default: null },
     email: { type: String, default: null },
     wallet: { type: Number, default: 0 },
+    isFirstLoginPending: { type: Boolean, default: false },
+    canRedeemInviteCode: { type: Boolean, default: false },
+    referredBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+    referredInviteCode: { type: String, default: null },
+    referralRedeemedAt: { type: Date, default: null },
   },
   { timestamps: true }
 );

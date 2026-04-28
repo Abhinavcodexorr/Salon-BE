@@ -1,5 +1,5 @@
 const Admin = require("../models/Admin");
-const bcrypt = require("bcrypt");
+const bcrypt = require("bcryptjs");
 
 const DEFAULT_EMAIL = "superadmin@admin.com";
 const DEFAULT_PASSWORD = "qwerty";
