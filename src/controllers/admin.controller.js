@@ -189,8 +189,8 @@ async function listUsers(req, res, next) {
   }
 }
 
-/** Dashboard badges: total appointments + unread in-app notifications (customer app). Admin token only. */
-async function getDashboardCounts(req, res, next) {
+/** Header notification bell + badge: total appointments + unread customer notifications (admin JWT). */
+async function getAdminCounts(req, res, next) {
   try {
     const [appointmentsCount, notificationCount] = await Promise.all([
       Appointment.countDocuments({}),
@@ -204,6 +204,30 @@ async function getDashboardCounts(req, res, next) {
         notificationCount,
       },
       "Counts retrieved successfully"
+    );
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * Dashboard KPIs (admin JWT). Services = documents still in DB (delete removes rows; no soft-delete field).
+ */
+async function getDashboard(req, res, next) {
+  try {
+    const [servicesCount, appointmentsCount, customersCount] = await Promise.all([
+      Service.countDocuments({}),
+      Appointment.countDocuments({}),
+      User.countDocuments({}),
+    ]);
+    success(
+      res,
+      {
+        servicesCount,
+        appointmentsCount,
+        customersCount,
+      },
+      "Dashboard retrieved successfully"
     );
   } catch (err) {
     next(err);
@@ -271,5 +295,6 @@ module.exports = {
   seedServices,
   listUsers,
   listAppointments,
-  getDashboardCounts,
+  getAdminCounts,
+  getDashboard,
 };

@@ -10,8 +10,11 @@ const { superadminAuth } = require("../middleware/auth");
 router.post("/login", adminAuthController.login);
 router.post("/logout", adminAuthController.logout);
 
-/** Dashboard: appointment total + unread notifications — requires admin JWT from POST /admin/login */
-router.get("/counts", superadminAuth, adminController.getDashboardCounts);
+/** Header bell / badges: appointments total + unread notifications — admin JWT */
+router.get("/counts", superadminAuth, adminController.getAdminCounts);
+
+/** Dashboard cards: services, appointments, customers — admin JWT */
+router.get("/dashboard", superadminAuth, adminController.getDashboard);
 
 /** Single salon availability row — create or update each time (timestamps on document). */
 router.put("/availability", superadminAuth, availabilityController.putAvailability);
