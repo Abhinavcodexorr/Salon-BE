@@ -12,6 +12,20 @@ const {
 } = require("../config/slots");
 const { resolveSalonBookingWindow } = require("../services/salonAvailability.service");
 
+/**
+ * Appointments tied to this account: saved with userId OR guest rows (userId null) with same mobile + countryCode.
+ */
+function buildMyAppointmentsFilter(userDoc) {
+  const mobile = String(userDoc.mobile || "").replace(/\D/g, "");
+  const countryCode = userDoc.countryCode;
+  return {
+    $or: [
+      { userId: userDoc._id },
+      { userId: null, mobile, countryCode },
+    ],
+  };
+}
+
 async function getAvailableSlots(req, res, next) {
   try {
     const { date, serviceId } = req.query;
@@ -146,7 +160,10 @@ async function create(req, res, next) {
 
 async function getMyAppointments(req, res, next) {
   try {
-    const appointments = await Appointment.find({ userId: req.userId })
+    const user = await User.findById(req.userId).select("mobile countryCode").lean();
+    if (!user) throw new AppError("User not found", 404);
+
+    const appointments = await Appointment.find(buildMyAppointmentsFilter(user))
       .sort({ createdAt: -1 })
       .lean();
     success(res, appointments, "Appointments retrieved successfully");
@@ -160,13 +177,21 @@ async function getMyAppointments(req, res, next) {
  */
 async function getCounts(req, res, next) {
   try {
+    const user = await User.findById(req.userId).select("mobile countryCode").lean();
+    if (!user) throw new AppError("User not found", 404);
+
     const [appointmentsCount, notificationCount] = await Promise.all([
-      Appointment.countDocuments({ userId: req.userId }),
-      Notification.countDocuments({ userId: req.userId, read: false }),
+      Appointment.countDocuments(buildMyAppointmentsFilter(user)),
+      Notification.countDocuments({ userId: user._id, read: false }),
     ]);
+
     success(
       res,
-      { appointmentsCount, notificationCount },
+      {
+        appointmentsCount,
+        appointmentCount: appointmentsCount,
+        notificationCount,
+      },
       "Counts retrieved successfully"
     );
   } catch (err) {
