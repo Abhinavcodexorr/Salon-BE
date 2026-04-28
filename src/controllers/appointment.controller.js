@@ -173,16 +173,34 @@ async function getMyAppointments(req, res, next) {
 }
 
 /**
- * Badge-style counts for the logged-in user: total appointments + unread notifications.
+ * Badge-style counts: appointments + unread notifications for this mobile/countryCode (no auth token).
  */
 async function getCounts(req, res, next) {
   try {
-    const user = await User.findById(req.userId).select("mobile countryCode").lean();
-    if (!user) throw new AppError("Session invalid — please log in again", 401);
+    const { mobile, countryCode } = req.query;
+    if (!mobile || !countryCode) {
+      throw new AppError("mobile and countryCode query params are required", 400);
+    }
+
+    const normalizedMobile = String(mobile).replace(/\D/g, "");
+    const cc = String(countryCode).trim();
+
+    const user = await User.findOne({
+      mobile: normalizedMobile,
+      countryCode: cc,
+    })
+      .select("_id mobile countryCode")
+      .lean();
+
+    const appointmentsFilter = user
+      ? buildMyAppointmentsFilter(user)
+      : { userId: null, mobile: normalizedMobile, countryCode: cc };
 
     const [appointmentsCount, notificationCount] = await Promise.all([
-      Appointment.countDocuments(buildMyAppointmentsFilter(user)),
-      Notification.countDocuments({ userId: user._id, read: false }),
+      Appointment.countDocuments(appointmentsFilter),
+      user
+        ? Notification.countDocuments({ userId: user._id, read: false })
+        : Promise.resolve(0),
     ]);
 
     success(
