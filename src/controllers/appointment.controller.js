@@ -1,4 +1,5 @@
 const Appointment = require("../models/Appointment");
+const Notification = require("../models/Notification");
 const Service = require("../models/Service");
 const User = require("../models/User");
 const { AppError } = require("../middleware/errorHandler");
@@ -122,6 +123,14 @@ async function create(req, res, next) {
     });
 
     if (req.userId) {
+      await Notification.create({
+        userId: req.userId,
+        read: false,
+        type: "appointment",
+        title: "Appointment booked",
+        body: `${serviceTitle} on ${date}${time ? ` at ${time}` : ""}`,
+        appointmentId: appointment._id,
+      });
       const nm = String(name).trim();
       const em = String(email).trim().toLowerCase();
       await User.findByIdAndUpdate(req.userId, {
@@ -146,4 +155,23 @@ async function getMyAppointments(req, res, next) {
   }
 }
 
-module.exports = { create, getMyAppointments, getAvailableSlots };
+/**
+ * Badge-style counts for the logged-in user: total appointments + unread notifications.
+ */
+async function getCounts(req, res, next) {
+  try {
+    const [appointmentsCount, notificationCount] = await Promise.all([
+      Appointment.countDocuments({ userId: req.userId }),
+      Notification.countDocuments({ userId: req.userId, read: false }),
+    ]);
+    success(
+      res,
+      { appointmentsCount, notificationCount },
+      "Counts retrieved successfully"
+    );
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { create, getMyAppointments, getAvailableSlots, getCounts };
