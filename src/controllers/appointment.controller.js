@@ -64,7 +64,7 @@ async function getAvailableSlots(req, res, next) {
     success(res, {
       slots: availableSlots,
       duration,
-      serviceTitle: service.title,
+      serviceTitle: Service.getDisplayNameForDoc(service),
     }, "Available slots retrieved successfully");
   } catch (err) {
     next(err);
@@ -88,10 +88,14 @@ async function create(req, res, next) {
     if (serviceId) {
       serviceDoc = await Service.findById(serviceId);
       if (!serviceDoc) throw new AppError("Service not found", 404);
-      serviceTitle = serviceDoc.title;
+      serviceTitle = Service.getDisplayNameForDoc(serviceDoc);
       duration = serviceDoc.duration || 30;
     } else if (service) {
-      serviceDoc = await Service.findOne({ title: service, isActive: true });
+      const q = String(service).trim();
+      serviceDoc = await Service.findOne({
+        isActive: true,
+        $or: [{ title: q }, { heading: q }],
+      });
       duration = serviceDoc ? (serviceDoc.duration || 30) : 30;
     }
 

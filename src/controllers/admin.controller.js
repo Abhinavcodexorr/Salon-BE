@@ -5,6 +5,40 @@ const Service = require("../models/Service");
 const { AppError } = require("../middleware/errorHandler");
 const { success } = require("../utils/response");
 
+/** Normalizes admin payload: each block has `subheading` + `items: [{ name, price }]`. */
+function normalizeSubheadings(raw) {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((block) => {
+      const subheading = String(block.subheading ?? block.title ?? "").trim();
+      const itemsRaw = block.items;
+      const items = Array.isArray(itemsRaw)
+        ? itemsRaw
+            .map((line) => ({
+              name: String(line.name ?? "").trim(),
+              price: Math.max(0, Number(line.price) || 0),
+            }))
+            .filter((line) => line.name.length > 0)
+        : [];
+      if (!subheading) return null;
+      return { subheading, items };
+    })
+    .filter(Boolean);
+}
+
+function assertValidServiceMenu(heading, subheadings) {
+  if (!heading) throw new AppError("heading is required", 400);
+  if (subheadings.length === 0) {
+    throw new AppError("At least one subheading block is required", 400);
+  }
+  for (let i = 0; i < subheadings.length; i += 1) {
+    const block = subheadings[i];
+    if (!block.items || block.items.length === 0) {
+      throw new AppError(`Each subheading must have at least one priced item (block ${i + 1})`, 400);
+    }
+  }
+}
+
 async function listServices(req, res, next) {
   try {
     const { status } = req.query; // all | active | deactivated
@@ -33,12 +67,28 @@ async function getServiceById(req, res, next) {
 
 async function createService(req, res, next) {
   try {
-    const { title, description, items, image, alt, duration, price } = req.body;
-   
-    const service = await Service.create({
+    const {
+      heading: headingRaw,
+      subheadings: subRaw,
       title,
       description,
-      items: items || [],
+      items,
+      image,
+      alt,
+      duration,
+      price,
+    } = req.body;
+
+    const heading = String(headingRaw ?? title ?? "").trim();
+    const subheadings = normalizeSubheadings(subRaw);
+    assertValidServiceMenu(heading, subheadings);
+
+    const service = await Service.create({
+      heading,
+      subheadings,
+      title: heading,
+      description: description != null ? description : "",
+      items: Array.isArray(items) ? items : [],
       image: image || "",
       alt: alt || "",
       duration: duration != null ? Number(duration) : 30,
@@ -54,10 +104,20 @@ async function createService(req, res, next) {
 async function updateService(req, res, next) {
   try {
     const { id } = req.params;
-    const { title, description, items, image, alt, isActive, duration, price } = req.body;
+    const {
+      heading: headingRaw,
+      subheadings: subRaw,
+      title,
+      description,
+      items,
+      image,
+      alt,
+      isActive,
+      duration,
+      price,
+    } = req.body;
 
     const update = {};
-    if (title !== undefined) update.title = title;
     if (description !== undefined) update.description = description;
     if (items !== undefined) update.items = items;
     if (image !== undefined) update.image = image;
@@ -65,6 +125,24 @@ async function updateService(req, res, next) {
     if (typeof isActive === "boolean") update.isActive = isActive;
     if (duration != null) update.duration = Number(duration);
     if (price !== undefined) update.price = Math.max(0, Number(price) || 0);
+
+    if (headingRaw !== undefined || title !== undefined || subRaw !== undefined) {
+      const existing = await Service.findById(id).lean();
+      if (!existing) throw new AppError("Service not found", 404);
+
+      const nextHeading =
+        headingRaw !== undefined || title !== undefined
+          ? String(headingRaw ?? title ?? existing.heading ?? existing.title ?? "").trim()
+          : String(existing.heading || existing.title || "").trim();
+
+      const nextSub =
+        subRaw !== undefined ? normalizeSubheadings(subRaw) : normalizeSubheadings(existing.subheadings);
+
+      assertValidServiceMenu(nextHeading, nextSub);
+      update.heading = nextHeading;
+      update.subheadings = nextSub;
+      update.title = nextHeading;
+    }
 
     const service = await Service.findByIdAndUpdate(id, update, { new: true });
     if (!service) throw new AppError("Service not found", 404);
@@ -89,18 +167,37 @@ async function seedServices(req, res, next) {
   try {
     const { services: servicePayload = [] } = req.body || {};
     for (const svc of servicePayload) {
-      const { title, description, items, image, alt, duration, price } = svc;
-      const priceNum = price != null && price !== "" ? Math.max(0, Number(price)) : 0;
+      const subheadings = normalizeSubheadings(svc.subheadings);
+      const heading = String(svc.heading ?? svc.title ?? "").trim();
+      const legacyTitle = String(svc.title ?? "").trim();
+      const matchKey = heading || legacyTitle;
+      if (!matchKey) continue;
+
+      const priceNum = svc.price != null && svc.price !== "" ? Math.max(0, Number(svc.price)) : 0;
+      const durationNum = svc.duration != null ? Number(svc.duration) : 30;
+
+      const setDoc = {
+        description: svc.description,
+        items: Array.isArray(svc.items) ? svc.items : [],
+        image: svc.image || "",
+        alt: svc.alt || "",
+        isActive: true,
+        price: priceNum,
+        duration: durationNum,
+      };
+
+      if (heading && subheadings.length > 0) {
+        setDoc.heading = heading;
+        setDoc.subheadings = subheadings;
+        setDoc.title = heading;
+      } else {
+        setDoc.title = legacyTitle || heading;
+        if (heading) setDoc.heading = heading;
+      }
+
       await Service.findOneAndUpdate(
-        { title: title || svc.title },
-        {
-          $setOnInsert: {
-            ...svc,
-            items: svc.items || [],
-            isActive: true,
-            price: priceNum,
-          },
-        },
+        { $or: [{ heading: matchKey }, { title: matchKey }] },
+        { $setOnInsert: setDoc },
         { upsert: true, new: true }
       );
     }
