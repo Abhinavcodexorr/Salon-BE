@@ -5,23 +5,49 @@ const Service = require("../models/Service");
 const { AppError } = require("../middleware/errorHandler");
 const { success } = require("../utils/response");
 
-/** Normalizes admin payload: each block has `subheading` + `items: [{ name, price }]`. */
+/**
+ * Normalizes admin payload: each block has `subheading`, optional block `duration` or `time` (minutes),
+ * and `items: [{ name, price, time }]` — `time` is minutes; legacy `duration` on a line is accepted too.
+ */
 function normalizeSubheadings(raw) {
   if (!Array.isArray(raw)) return [];
   return raw
     .map((block) => {
       const subheading = String(block.subheading ?? block.title ?? "").trim();
+      const blockRawMin =
+        block.duration != null && block.duration !== ""
+          ? block.duration
+          : block.time != null && block.time !== ""
+            ? block.time
+            : null;
+      const blockN = blockRawMin != null ? Number(blockRawMin) : NaN;
+      const blockDuration =
+        Number.isFinite(blockN) && blockN >= 1 ? Math.floor(blockN) : undefined;
+
       const itemsRaw = block.items;
       const items = Array.isArray(itemsRaw)
         ? itemsRaw
-            .map((line) => ({
-              name: String(line.name ?? "").trim(),
-              price: Math.max(0, Number(line.price) || 0),
-            }))
+            .map((line) => {
+              const name = String(line.name ?? "").trim();
+              const price = Math.max(0, Number(line.price) || 0);
+              const rawMin =
+                line.time != null && line.time !== ""
+                  ? line.time
+                  : line.duration != null && line.duration !== ""
+                    ? line.duration
+                    : null;
+              const n = rawMin != null ? Number(rawMin) : NaN;
+              const time = Number.isFinite(n) && n >= 1 ? Math.floor(n) : undefined;
+              const out = { name, price };
+              if (time !== undefined) out.time = time;
+              return out;
+            })
             .filter((line) => line.name.length > 0)
         : [];
       if (!subheading) return null;
-      return { subheading, items };
+      const out = { subheading, items };
+      if (blockDuration !== undefined) out.duration = blockDuration;
+      return out;
     })
     .filter(Boolean);
 }
@@ -35,6 +61,16 @@ function assertValidServiceMenu(heading, subheadings) {
     const block = subheadings[i];
     if (!block.items || block.items.length === 0) {
       throw new AppError(`Each subheading must have at least one priced item (block ${i + 1})`, 400);
+    }
+    for (let j = 0; j < block.items.length; j += 1) {
+      const it = block.items[j];
+      const mins = it.time ?? it.duration;
+      if (mins == null || !Number.isFinite(Number(mins)) || Number(mins) < 1) {
+        throw new AppError(
+          `Each item must include "time" (minutes, number ≥ 1) — block ${i + 1}, item ${j + 1} (“${it.name || "unnamed"}”)`,
+          400
+        );
+      }
     }
   }
 }

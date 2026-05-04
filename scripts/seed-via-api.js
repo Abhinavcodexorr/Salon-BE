@@ -15,18 +15,20 @@ const seedPayload = {
       subheadings: [
         {
           subheading: "Cut & finish",
+          duration: 45,
           items: [
-            { name: "Women's cut & blow-dry", price: 85 },
-            { name: "Men's cut", price: 45 },
-            { name: "Children's cut", price: 35 },
+            { name: "Women's cut & blow-dry", price: 85, time: 60 },
+            { name: "Men's cut", price: 45, time: 30 },
+            { name: "Children's cut", price: 35, time: 30 },
           ],
         },
         {
           subheading: "Colour",
+          duration: 90,
           items: [
-            { name: "Full colour", price: 140 },
-            { name: "Half head foils", price: 120 },
-            { name: "Toner refresh", price: 55 },
+            { name: "Full colour", price: 140, time: 120 },
+            { name: "Half head foils", price: 120, time: 90 },
+            { name: "Toner refresh", price: 55, time: 30 },
           ],
         },
       ],
@@ -41,15 +43,15 @@ const seedPayload = {
         {
           subheading: "Face",
           items: [
-            { name: "Classic facial (60 min)", price: 95 },
-            { name: "Hydrating facial", price: 110 },
+            { name: "Classic facial (60 min)", price: 95, time: 60 },
+            { name: "Hydrating facial", price: 110, time: 60 },
           ],
         },
         {
           subheading: "Brows & lashes",
           items: [
-            { name: "Brow shape & tint", price: 45 },
-            { name: "Classic lash extensions", price: 130 },
+            { name: "Brow shape & tint", price: 45, time: 30 },
+            { name: "Classic lash extensions", price: 130, time: 90 },
           ],
         },
       ],
@@ -65,10 +67,10 @@ const seedPayload = {
         {
           subheading: "Hands & feet",
           items: [
-            { name: "Manicure", price: 40 },
-            { name: "Pedicure", price: 55 },
-            { name: "Gel manicure", price: 55 },
-            { name: "Deluxe pedicure", price: 75 },
+            { name: "Manicure", price: 40, time: 30 },
+            { name: "Pedicure", price: 55, time: 45 },
+            { name: "Gel manicure", price: 55, time: 45 },
+            { name: "Deluxe pedicure", price: 75, time: 60 },
           ],
         },
       ],

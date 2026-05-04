@@ -1,18 +1,24 @@
 const mongoose = require("mongoose");
 
-/** One priced line under a subheading (e.g. "Men's cut" — 45). */
+/** One priced line under a subheading: name, price, time (minutes). */
 const serviceLineSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
     price: { type: Number, required: true, min: 0, default: 0 },
+    /** Minutes for this line (send as `time`; `duration` is still accepted on write and mapped here). */
+    time: { type: Number, min: 1, default: undefined },
+    /** @deprecated Use `time`. Kept so old documents still load. */
+    duration: { type: Number, min: 1, default: undefined },
   },
   { _id: false }
 );
 
-/** Subheading block: title + list of name/price lines. */
+/** Subheading block: title + optional block-level minutes + priced lines. */
 const subheadingBlockSchema = new mongoose.Schema(
   {
     subheading: { type: String, required: true, trim: true },
+    /** Minutes for this whole subheading (optional; can differ per block). */
+    duration: { type: Number, min: 1, default: undefined },
     items: { type: [serviceLineSchema], default: [] },
   },
   { _id: true }
@@ -31,7 +37,7 @@ const serviceSchema = new mongoose.Schema(
     image: { type: String, default: "" },
     alt: { type: String, default: "" },
     isActive: { type: Boolean, default: true },
-    duration: { type: Number, default: 0, min: 1 },
+    duration: { type: Number, default: 30, min: 1 },
     /** @deprecated Prefer line-level `price` inside `subheadings[].items`. */
     price: { type: Number, default: 0, min: 0 },
   },
