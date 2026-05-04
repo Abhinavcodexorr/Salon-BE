@@ -31,7 +31,7 @@ const serviceSchema = new mongoose.Schema(
     image: { type: String, default: "" },
     alt: { type: String, default: "" },
     isActive: { type: Boolean, default: true },
-    duration: { type: Number, default: 30, min: 1 },
+    duration: { type: Number, default: 0, min: 1 },
     /** @deprecated Prefer line-level `price` inside `subheadings[].items`. */
     price: { type: Number, default: 0, min: 0 },
   },
