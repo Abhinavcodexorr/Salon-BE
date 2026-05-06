@@ -440,15 +440,16 @@ async function listAppointments(req, res, next) {
 
     const appointments = raw.map((a) => {
       const groupedServices = buildGroupedServicesFromAppointment(a);
+      const { serviceSelections, service, serviceId, ...rest } = a;
       if (!a.userId || typeof a.userId !== "object") {
         return {
-          ...a,
+          ...rest,
           services: groupedServices,
         };
       }
       const w = a.userId.wallet;
       return {
-        ...a,
+        ...rest,
         userId: {
           ...a.userId,
           wallet: w != null && w !== "" ? Number(w) : 0,
