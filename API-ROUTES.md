@@ -226,10 +226,46 @@ curl --request POST "http://localhost:3001/api/v1/appointments" \
     "email": "john@example.com",
     "mobile": "410123456",
     "countryCode": "+61",
-    "service": "Hair Styling",
+    "serviceId": "6651c8985b7c215f1f9f50b1",
+    "serviceName": "Hair",
+    "subheading": "Hair Cut",
+    "serviceItemName": "Classic Cut",
+    "estimatedTime": 45,
     "date": "2025-03-25",
     "time": "10:00",
     "notes": "First visit"
+  }'
+```
+
+### 6.1 Create Appointment with Multiple Services + Sub-services
+
+```bash
+curl --request POST "http://localhost:3001/api/v1/appointments" \
+  --header "Content-Type: application/json" \
+  --data-raw '{
+    "name": "John Doe",
+    "email": "john@example.com",
+    "mobile": "410123456",
+    "countryCode": "+61",
+    "date": "2025-03-25",
+    "time": "11:00",
+    "notes": "Prefer senior stylist",
+    "serviceSelections": [
+      {
+        "serviceId": "6651c8985b7c215f1f9f50b1",
+        "serviceName": "Hair",
+        "subheading": "Hair Cut",
+        "serviceItemName": "Classic Cut",
+        "estimatedTime": 45
+      },
+      {
+        "serviceId": "6651c8b85b7c215f1f9f50c9",
+        "serviceName": "Nails",
+        "subheading": "Manicure",
+        "serviceItemName": "Gel Manicure",
+        "estimatedTime": 30
+      }
+    ]
   }'
 ```
 

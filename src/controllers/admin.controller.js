@@ -367,6 +367,51 @@ async function getDashboard(req, res, next) {
   }
 }
 
+function buildGroupedServicesFromAppointment(appointment) {
+  const rows = Array.isArray(appointment?.serviceSelections) ? appointment.serviceSelections : [];
+  const grouped = new Map();
+
+  for (const row of rows) {
+    const serviceIdRaw = row?.serviceId;
+    const serviceId = serviceIdRaw ? String(serviceIdRaw) : null;
+    if (!serviceId) continue;
+    const serviceName = String(row?.serviceName ?? "").trim() || null;
+    const subName = String(row?.serviceItemName ?? "").trim();
+    if (!grouped.has(serviceId)) {
+      grouped.set(serviceId, {
+        serviceId,
+        serviceName,
+        subServices: [],
+      });
+    }
+    if (subName) {
+      grouped.get(serviceId).subServices.push({
+        name: subName,
+        price: Math.max(0, Number(row?.price) || 0),
+      });
+    }
+  }
+
+  if (grouped.size > 0) return Array.from(grouped.values());
+
+  // Legacy fallback when old rows don't have serviceSelections.
+  if (appointment?.serviceId) {
+    const serviceId = String(appointment.serviceId);
+    const item = String(appointment?.serviceItemName ?? "").trim();
+    return [
+      {
+        serviceId,
+        serviceName: String(appointment?.serviceName ?? "").trim() || null,
+        subServices: item
+          ? [{ name: item, price: Math.max(0, Number(appointment?.totalAmount) || 0) }]
+          : [],
+      },
+    ];
+  }
+
+  return [];
+}
+
 async function listAppointments(req, res, next) {
   try {
     const { page = 1, limit = 20, status, search } = req.query;
@@ -394,7 +439,13 @@ async function listAppointments(req, res, next) {
     ]);
 
     const appointments = raw.map((a) => {
-      if (!a.userId || typeof a.userId !== "object") return a;
+      const groupedServices = buildGroupedServicesFromAppointment(a);
+      if (!a.userId || typeof a.userId !== "object") {
+        return {
+          ...a,
+          services: groupedServices,
+        };
+      }
       const w = a.userId.wallet;
       return {
         ...a,
@@ -402,6 +453,7 @@ async function listAppointments(req, res, next) {
           ...a.userId,
           wallet: w != null && w !== "" ? Number(w) : 0,
         },
+        services: groupedServices,
       };
     });
 

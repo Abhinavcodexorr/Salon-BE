@@ -62,6 +62,15 @@ function buildServiceDisplayLine(serviceName, subheading, itemName) {
   return [serviceName, subheading, itemName].filter((s) => s && String(s).trim()).join(" › ");
 }
 
+function readEstimatedMinutes(raw, fieldLabel = "estimatedTime") {
+  if (raw == null || raw === "") return null;
+  const mins = Number(raw);
+  if (!Number.isFinite(mins) || mins < 1) {
+    throw new AppError(`${fieldLabel} must be a number >= 1`, 400);
+  }
+  return Math.floor(mins);
+}
+
 /**
  * Resolves each row to a stored selection + total minutes.
  * @param {Array<{ serviceId: string, subheading?: string, subservice?: string, serviceItemName?: string, itemName?: string, serviceName?: string }>} rows
@@ -86,11 +95,16 @@ async function buildSelectionsFromRows(rows) {
     const sub = String(row.subheading ?? row.subservice ?? "").trim() || null;
     const item = String(row.serviceItemName ?? row.itemName ?? "").trim() || null;
     const sn = String(row.serviceName ?? "").trim() || Service.getDisplayNameForDoc(doc);
-    const mins = resolveBookingDurationFromService(doc, {
-      subheading: sub,
-      serviceItemName: item,
-      itemName: item,
-    });
+    const mins =
+      readEstimatedMinutes(
+        row.estimatedTime ?? row.estTime,
+        `serviceSelections[${i}].estimatedTime`
+      ) ??
+      resolveBookingDurationFromService(doc, {
+        subheading: sub,
+        serviceItemName: item,
+        itemName: item,
+      });
     const price = linePriceFromService(doc, sub, item);
     const displayLine = buildServiceDisplayLine(sn, sub, item) || sn;
     selections.push({
@@ -106,6 +120,74 @@ async function buildSelectionsFromRows(rows) {
   }
 
   const totalAmount = selections.reduce((sum, s) => sum + (Number(s.price) || 0), 0);
+  return { selections, totalDuration, totalAmount };
+}
+
+/**
+ * Supports simplified grouped shape from frontend:
+ * [{ serviceId, serviceName?, subServices: [{ name, price?, subheading?, estimatedTime? }] }]
+ */
+async function buildSelectionsFromGroupedServices(groups) {
+  if (!Array.isArray(groups) || groups.length === 0) {
+    throw new AppError("services must be a non-empty array", 400);
+  }
+  const selections = [];
+  let totalDuration = 0;
+  let totalAmount = 0;
+
+  for (let i = 0; i < groups.length; i += 1) {
+    const group = groups[i] || {};
+    const id = group.serviceId;
+    if (!id || !mongoose.Types.ObjectId.isValid(String(id))) {
+      throw new AppError(`services[${i}].serviceId must be a valid ObjectId`, 400);
+    }
+    const doc = await Service.findById(id);
+    if (!doc) throw new AppError(`Service not found for services[${i}]`, 404);
+    if (!doc.isActive) throw new AppError(`Service is not active (services[${i}])`, 400);
+
+    const serviceName = String(group.serviceName ?? "").trim() || Service.getDisplayNameForDoc(doc);
+    const subServices = Array.isArray(group.subServices) ? group.subServices : [];
+    if (subServices.length === 0) {
+      throw new AppError(`services[${i}].subServices must be a non-empty array`, 400);
+    }
+
+    for (let j = 0; j < subServices.length; j += 1) {
+      const subRow = subServices[j] || {};
+      const itemName = String(subRow.name ?? subRow.serviceItemName ?? "").trim();
+      if (!itemName) {
+        throw new AppError(`services[${i}].subServices[${j}].name is required`, 400);
+      }
+      const subheading = String(subRow.subheading ?? subRow.subservice ?? "").trim() || null;
+      const duration =
+        readEstimatedMinutes(
+          subRow.estimatedTime ?? subRow.estTime,
+          `services[${i}].subServices[${j}].estimatedTime`
+        ) ??
+        resolveBookingDurationFromService(doc, {
+          subheading,
+          serviceItemName: itemName,
+          itemName,
+        });
+      const priceRaw = subRow.price;
+      const price =
+        priceRaw == null
+          ? linePriceFromService(doc, subheading, itemName)
+          : Math.max(0, Number(priceRaw) || 0);
+      const displayLine = buildServiceDisplayLine(serviceName, subheading, itemName) || serviceName;
+      selections.push({
+        serviceId: doc._id,
+        serviceName,
+        subheading,
+        serviceItemName: itemName,
+        duration,
+        price,
+        displayLine,
+      });
+      totalDuration += duration;
+      totalAmount += price;
+    }
+  }
+
   return { selections, totalDuration, totalAmount };
 }
 
@@ -132,21 +214,36 @@ function buildMyAppointmentsFilter(userDoc) {
 
 async function getAvailableSlots(req, res, next) {
   try {
-    const { date, serviceId, subheading, subservice, serviceItemName, itemName, serviceSelections } = req.query;
+    const {
+      date,
+      serviceId,
+      subheading,
+      subservice,
+      serviceItemName,
+      itemName,
+      serviceSelections,
+      estimatedTime,
+      estTime,
+      services,
+    } = req.query;
     if (!date) {
       throw new AppError("date is required", 400);
     }
 
     const rows = parseServiceSelectionsQuery(serviceSelections);
+    const grouped = parseServiceSelectionsQuery(services);
     let duration;
     let serviceTitle = "";
 
     let totalAmount = 0;
-    if (rows && rows.length > 0) {
-      const built = await buildSelectionsFromRows(rows);
+    if ((rows && rows.length > 0) || (grouped && grouped.length > 0)) {
+      const built = rows && rows.length > 0
+        ? await buildSelectionsFromRows(rows)
+        : await buildSelectionsFromGroupedServices(grouped);
       duration = built.totalDuration;
       totalAmount = built.totalAmount;
       serviceTitle = built.selections.map((s) => s.displayLine).join(" | ");
+      duration = readEstimatedMinutes(estimatedTime ?? estTime, "estimatedTime") ?? duration;
     } else {
       if (!serviceId) {
         throw new AppError("serviceId or serviceSelections (JSON array) is required", 400);
@@ -162,6 +259,7 @@ async function getAvailableSlots(req, res, next) {
         serviceItemName,
         itemName,
       });
+      duration = readEstimatedMinutes(estimatedTime ?? estTime, "estimatedTime") ?? duration;
       serviceTitle = Service.getDisplayNameForDoc(service);
       const subQ = String(subheading ?? subservice ?? "").trim() || null;
       const itemQ = String(serviceItemName ?? itemName ?? "").trim() || null;
@@ -221,7 +319,10 @@ async function create(req, res, next) {
       subservice,
       serviceItemName,
       itemName,
+      estimatedTime,
+      estTime,
       serviceSelections: serviceSelectionsBody,
+      services: servicesBody,
       date,
       time,
       notes,
@@ -232,8 +333,9 @@ async function create(req, res, next) {
     }
 
     const hasMulti = Array.isArray(serviceSelectionsBody) && serviceSelectionsBody.length > 0;
-    if (!hasMulti && !service && !serviceId) {
-      throw new AppError("service or serviceId, or serviceSelections[], is required", 400);
+    const hasGrouped = Array.isArray(servicesBody) && servicesBody.length > 0;
+    if (!hasMulti && !hasGrouped && !service && !serviceId) {
+      throw new AppError("service or serviceId, or serviceSelections[], or services[] is required", 400);
     }
 
     let serviceDoc = null;
@@ -242,14 +344,18 @@ async function create(req, res, next) {
     let serviceSelections = [];
     const subheadingVal = String(subheading ?? subservice ?? "").trim() || null;
     const itemVal = String(serviceItemName ?? itemName ?? "").trim() || null;
+    const estimatedMinutes = readEstimatedMinutes(estimatedTime ?? estTime, "estimatedTime");
 
-    if (hasMulti) {
-      const built = await buildSelectionsFromRows(serviceSelectionsBody);
+    if (hasMulti || hasGrouped) {
+      const built = hasMulti
+        ? await buildSelectionsFromRows(serviceSelectionsBody)
+        : await buildSelectionsFromGroupedServices(servicesBody);
       serviceSelections = built.selections;
       duration = built.totalDuration;
       serviceTitle = built.selections.map((s) => s.displayLine).join(" | ");
       const first = built.selections[0];
       serviceDoc = await Service.findById(first.serviceId);
+      duration = estimatedMinutes ?? duration;
     } else if (serviceId) {
       if (!mongoose.Types.ObjectId.isValid(serviceId)) {
         throw new AppError("Invalid serviceId. Use the service document _id only.", 400);
@@ -266,6 +372,7 @@ async function create(req, res, next) {
         serviceItemName: itemVal,
         itemName: itemVal,
       });
+      duration = estimatedMinutes ?? duration;
       const price = linePriceFromService(serviceDoc, subheadingVal, itemVal);
       serviceSelections = [
         {
@@ -291,6 +398,7 @@ async function create(req, res, next) {
             itemName: itemVal,
           })
         : 30;
+      duration = estimatedMinutes ?? duration;
       if (serviceDoc) {
         const headingDisplay = Service.getDisplayNameForDoc(serviceDoc);
         const nameFromBody = String(serviceNameBody ?? "").trim();
