@@ -201,6 +201,18 @@ function parseServiceSelectionsQuery(raw) {
   }
 }
 
+function isValidYmd(str) {
+  if (typeof str !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(str)) return false;
+  const d = new Date(`${str}T00:00:00.000Z`);
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === str;
+}
+
+function addDaysYmd(ymd, days) {
+  const d = new Date(`${ymd}T00:00:00.000Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
 function buildMyAppointmentsFilter(userDoc) {
   const mobile = String(userDoc.mobile || "").replace(/\D/g, "");
   const countryCode = userDoc.countryCode;
@@ -533,4 +545,38 @@ async function getMyAppointments(req, res, next) {
   }
 }
 
-module.exports = { create, getMyAppointments, getAvailableSlots };
+async function getBookedSlots(req, res, next) {
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const fromDate = String(req.query.fromDate || today).trim();
+    const toDate = String(req.query.toDate || addDaysYmd(fromDate, 14)).trim();
+
+    if (!isValidYmd(fromDate) || !isValidYmd(toDate)) {
+      throw new AppError("fromDate and toDate must be YYYY-MM-DD", 400);
+    }
+    if (fromDate > toDate) {
+      throw new AppError("fromDate must be less than or equal to toDate", 400);
+    }
+
+    const appointments = await Appointment.find({
+      date: { $gte: fromDate, $lte: toDate },
+      status: { $nin: ["cancelled"] },
+      time: { $exists: true, $ne: null },
+    })
+      .sort({ date: 1, time: 1, createdAt: 1 })
+      .lean();
+
+    const bookedSlots = appointments.map((a) => {
+      const start = String(a.time).trim();
+      const duration = Math.max(1, Number(a.duration) || 30);
+      const end = minutesToTimeStr(parseTimeToMinutes(start) + duration);
+      return { date: a.date, start, end };
+    });
+
+    success(res, { bookedSlots }, "Booked slots retrieved successfully");
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { create, getMyAppointments, getAvailableSlots, getBookedSlots };

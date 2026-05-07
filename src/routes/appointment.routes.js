@@ -4,6 +4,7 @@ const appointmentController = require("../controllers/appointment.controller");
 const { auth, optionalAuth } = require("../middleware/auth");
 
 router.get("/available-slots", appointmentController.getAvailableSlots);
+router.get("/booked-slots", appointmentController.getBookedSlots);
 router.post("/", optionalAuth, appointmentController.create);
 router.get("/my", auth, appointmentController.getMyAppointments);
 
