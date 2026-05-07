@@ -7,7 +7,9 @@
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
     "db:seed": "node seed.js",
-    "db:seed:api": "node scripts/seed-via-api.js"
+    "db:seed:api": "node scripts/seed-via-api.js",
+    "gmail:auth-url": "node scripts/gmail-oauth.js auth-url",
+    "gmail:exchange": "node scripts/gmail-oauth.js exchange"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1012.0",
@@ -15,6 +17,7 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.21.0",
+    "googleapis": "^171.4.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.7.0",
     "multer": "^2.1.1",

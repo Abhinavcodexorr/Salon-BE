@@ -9,6 +9,7 @@ const uploadRoutes = require("./routes/upload.routes");
 const availabilityRoutes = require("./routes/availability.routes");
 const enquiryRoutes = require("./routes/enquiry.routes");
 const referralRoutes = require("./routes/referral.routes");
+const gmailRoutes = require("./routes/gmail.routes");
 const { success } = require("./utils/response");
 const { errorHandler } = require("./middleware/errorHandler");
 
@@ -42,6 +43,7 @@ app.use(`${API_BASE}/enquiries`, enquiryRoutes);
 app.use(`${API_BASE}/admin`, adminRoutes);
 app.use(`${API_BASE}/upload`, uploadRoutes);
 app.use(`${API_BASE}/referrals`, referralRoutes);
+app.use(`${API_BASE}/gmail`, gmailRoutes);
 
 app.use(errorHandler);
 

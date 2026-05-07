@@ -5,6 +5,7 @@ const Service = require("../models/Service");
 const User = require("../models/User");
 const { AppError } = require("../middleware/errorHandler");
 const { success } = require("../utils/response");
+const { sendAppointmentConfirmationEmail } = require("../services/gmail.service");
 const {
   generateSlots,
   parseTimeToMinutes,
@@ -506,6 +507,22 @@ async function create(req, res, next) {
       notes: notes || null,
       serviceSelections,
     });
+
+    try {
+      await sendAppointmentConfirmationEmail({
+        to: String(email).trim().toLowerCase(),
+        customerName: String(name).trim(),
+        serviceTitle,
+        date,
+        timeRange: timeStart ? `${timeStart}${timeEnd ? ` - ${timeEnd}` : ""}` : "To be confirmed",
+        totalAmount,
+        notes: notes || "",
+        mobile: `${countryCode || "+61"} ${String(mobile).replace(/\D/g, "")}`,
+      });
+    } catch (mailErr) {
+      // Appointment should still be created even if email sending fails.
+      console.error("Failed to send appointment confirmation email:", mailErr.message);
+    }
 
     if (req.userId) {
       await Notification.create({
