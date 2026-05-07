@@ -36,6 +36,40 @@ function escapeHtml(value) {
     .replace(/'/g, "&#39;");
 }
 
+function formatGroupedServices(serviceSelections, fallbackTitle) {
+  if (!Array.isArray(serviceSelections) || serviceSelections.length === 0) {
+    return {
+      html: `<div style="font-size:14px;color:#222;">${escapeHtml(fallbackTitle || "-")}</div>`,
+      text: [fallbackTitle || "-"],
+    };
+  }
+
+  const groups = new Map();
+  for (const row of serviceSelections) {
+    const serviceName = String(row?.serviceName || "Service").trim() || "Service";
+    const subheading = String(row?.subheading || "").trim();
+    const item = String(row?.serviceItemName || "").trim();
+    const label = [subheading, item].filter(Boolean).join(" - ") || "Standard";
+    if (!groups.has(serviceName)) groups.set(serviceName, []);
+    groups.get(serviceName).push(label);
+  }
+
+  const htmlParts = [];
+  const textParts = [];
+  for (const [serviceName, labels] of groups.entries()) {
+    const uniqueLabels = [...new Set(labels)];
+    htmlParts.push(`
+      <div style="margin:0 0 10px 0;">
+        <div style="font-size:14px;font-weight:700;color:#111;">${escapeHtml(serviceName)}</div>
+        <div style="font-size:13px;color:#444;margin-top:3px;">${escapeHtml(uniqueLabels.join(", "))}</div>
+      </div>
+    `);
+    textParts.push(`${serviceName}: ${uniqueLabels.join(", ")}`);
+  }
+
+  return { html: htmlParts.join(""), text: textParts };
+}
+
 function buildAppointmentEmailTemplate(payload) {
   const {
     customerName,
@@ -45,15 +79,17 @@ function buildAppointmentEmailTemplate(payload) {
     totalAmount,
     notes,
     mobile,
+    serviceSelections,
   } = payload;
   const amountText = Number.isFinite(Number(totalAmount))
     ? `$${Number(totalAmount).toFixed(2)}`
     : "-";
   const safeNotes = String(notes || "").trim();
+  const groupedServices = formatGroupedServices(serviceSelections, serviceTitle);
 
   return `
-  <div style="margin:0;padding:0;background:#17120a;font-family:Arial,Helvetica,sans-serif;color:#2a1e0f;">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#17120a;padding:24px 0;">
+  <div style="margin:0;padding:0;background:#f7f7f7;font-family:Arial,Helvetica,sans-serif;color:#222;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f7f7f7;padding:24px 0;">
       <tr>
         <td align="center">
           <table role="presentation" width="620" cellpadding="0" cellspacing="0" style="max-width:620px;background:#fffdf6;border-radius:16px;overflow:hidden;border:1px solid #c8a75a;">
@@ -66,14 +102,15 @@ function buildAppointmentEmailTemplate(payload) {
             </tr>
             <tr>
               <td style="padding:28px 30px 12px 30px;">
-                <p style="margin:0 0 12px 0;font-size:16px;line-height:1.5;color:#36280f;">Hi ${escapeHtml(customerName)},</p>
-                <p style="margin:0 0 18px 0;font-size:15px;line-height:1.6;color:#5a4521;">
-                  Your booking is confirmed. We are excited to welcome you at BLOSM for a premium experience.
+                <p style="margin:0 0 12px 0;font-size:16px;line-height:1.5;color:#222;">Hi ${escapeHtml(customerName)},</p>
+                <p style="margin:0 0 18px 0;font-size:15px;line-height:1.6;color:#444;">
+                  Your booking is confirmed. We are excited to welcome you at BLOSM.
                 </p>
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #d2b475;border-radius:12px;overflow:hidden;background:#fffbef;">
                   <tr><td style="padding:12px 14px;background:#f5e4b6;font-size:13px;color:#6c4b11;font-weight:700;letter-spacing:0.2px;">Booking Details</td></tr>
-                  <tr><td style="padding:14px 16px;font-size:14px;line-height:1.75;color:#3b2a0f;">
-                    <strong>Service:</strong> ${escapeHtml(serviceTitle)}<br/>
+                  <tr><td style="padding:14px 16px;font-size:14px;line-height:1.75;color:#222;">
+                    <strong>Services:</strong>
+                    <div style="margin-top:8px;">${groupedServices.html}</div>
                     <strong>Date:</strong> ${escapeHtml(date)}<br/>
                     <strong>Time:</strong> ${escapeHtml(timeRange || "To be confirmed")}<br/>
                     <strong>Mobile:</strong> ${escapeHtml(mobile)}<br/>
@@ -82,17 +119,17 @@ function buildAppointmentEmailTemplate(payload) {
                 </table>
                 ${
                   safeNotes
-                    ? `<p style="margin:16px 0 0 0;font-size:14px;line-height:1.6;color:#3b2a0f;"><strong>Notes:</strong> ${escapeHtml(safeNotes)}</p>`
+                    ? `<p style="margin:16px 0 0 0;font-size:14px;line-height:1.6;color:#222;"><strong>Notes:</strong> ${escapeHtml(safeNotes)}</p>`
                     : ""
                 }
               </td>
             </tr>
             <tr>
               <td style="padding:20px 30px 30px 30px;">
-                <p style="margin:0;font-size:14px;line-height:1.6;color:#5a4521;">
+                <p style="margin:0;font-size:14px;line-height:1.6;color:#444;">
                   Need to reschedule? Reply to this email and our team will assist you.
                 </p>
-                <p style="margin:14px 0 0 0;font-size:13px;color:#8c6a2f;">Thank you for choosing BLOSM.</p>
+                <p style="margin:14px 0 0 0;font-size:13px;color:#666;">Thank you for choosing BLOSM.</p>
               </td>
             </tr>
           </table>
@@ -126,7 +163,8 @@ async function sendAppointmentConfirmationEmail(payload) {
     `Hi ${payload.customerName},`,
     "",
     "Your appointment is confirmed.",
-    `Service: ${payload.serviceTitle}`,
+    "Services:",
+    ...formatGroupedServices(payload.serviceSelections, payload.serviceTitle).text.map((line) => `- ${line}`),
     `Date: ${payload.date}`,
     `Time: ${payload.timeRange || "To be confirmed"}`,
     `Mobile: ${payload.mobile}`,

@@ -513,6 +513,7 @@ async function create(req, res, next) {
         to: String(email).trim().toLowerCase(),
         customerName: String(name).trim(),
         serviceTitle,
+        serviceSelections,
         date,
         timeRange: timeStart ? `${timeStart}${timeEnd ? ` - ${timeEnd}` : ""}` : "To be confirmed",
         totalAmount,
