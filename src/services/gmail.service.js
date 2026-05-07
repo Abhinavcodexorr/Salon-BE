@@ -53,7 +53,13 @@ function formatGroupedServices(serviceSelections, fallbackTitle) {
     // Avoid repeating heading in line items, e.g. "Body Spa - Full Body Scrub".
     const escapedServiceName = serviceName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const headingPrefixRegex = new RegExp(`^${escapedServiceName}\\s*[-:>]*\\s*`, "i");
-    const label = rawLabel.replace(headingPrefixRegex, "").trim() || "Standard";
+    const labelBase = rawLabel.replace(headingPrefixRegex, "").trim() || "Standard";
+    const durationMins = Math.max(0, Number(row?.duration) || 0);
+    const priceNum = Math.max(0, Number(row?.price) || 0);
+    const metaParts = [];
+    if (durationMins > 0) metaParts.push(`${durationMins} min`);
+    metaParts.push(`$${priceNum.toFixed(2)}`);
+    const label = `${labelBase} (${metaParts.join(" | ")})`;
     if (!groups.has(serviceName)) groups.set(serviceName, []);
     groups.get(serviceName).push(label);
   }
@@ -62,16 +68,43 @@ function formatGroupedServices(serviceSelections, fallbackTitle) {
   const textParts = [];
   for (const [serviceName, labels] of groups.entries()) {
     const uniqueLabels = [...new Set(labels)];
+    const labelHtml = uniqueLabels
+      .map(
+        (label) =>
+          `<div style="font-size:13px;color:#4b5563;line-height:1.6;margin-top:4px;">• ${escapeHtml(label)}</div>`
+      )
+      .join("");
     htmlParts.push(`
       <div style="margin:0 0 10px 0;">
         <div style="font-size:14px;font-weight:700;color:#111827;">${escapeHtml(serviceName)}</div>
-        <div style="font-size:13px;color:#4b5563;margin-top:3px;">${escapeHtml(uniqueLabels.join(", "))}</div>
+        <div style="margin-top:3px;">${labelHtml}</div>
       </div>
     `);
-    textParts.push(`${serviceName}: ${uniqueLabels.join(", ")}`);
+    textParts.push(serviceName);
+    uniqueLabels.forEach((label) => textParts.push(`  - ${label}`));
   }
 
   return { html: htmlParts.join(""), text: textParts };
+}
+
+function formatTimeTo12Hour(rawTime) {
+  const value = String(rawTime || "").trim();
+  const match = value.match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return value || "To be confirmed";
+  const hh = Number(match[1]);
+  const mm = match[2];
+  if (!Number.isFinite(hh) || hh < 0 || hh > 23) return value;
+  const suffix = hh >= 12 ? "PM" : "AM";
+  const hour12 = hh % 12 || 12;
+  return `${hour12}:${mm} ${suffix}`;
+}
+
+function formatTimeRangeTo12Hour(timeRange) {
+  const value = String(timeRange || "").trim();
+  if (!value) return "To be confirmed";
+  const parts = value.split("-").map((p) => p.trim()).filter(Boolean);
+  if (parts.length >= 2) return `${formatTimeTo12Hour(parts[0])} - ${formatTimeTo12Hour(parts[1])}`;
+  return formatTimeTo12Hour(value);
 }
 
 function buildAppointmentEmailTemplate(payload) {
@@ -90,6 +123,7 @@ function buildAppointmentEmailTemplate(payload) {
     : "-";
   const safeNotes = String(notes || "").trim();
   const groupedServices = formatGroupedServices(serviceSelections, serviceTitle);
+  const timeDisplay = formatTimeRangeTo12Hour(timeRange);
 
   return `
   <div style="margin:0;padding:0;background:#f2f4f8;font-family:'Segoe UI',Arial,Helvetica,sans-serif;color:#1f2937;">
@@ -135,7 +169,7 @@ function buildAppointmentEmailTemplate(payload) {
                           </td>
                           <td style="width:50%;padding:0 0 12px 8px;vertical-align:top;">
                             <div style="font-size:12px;color:#6b7280;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">Time</div>
-                            <div style="font-size:15px;color:#111827;font-weight:600;margin-top:2px;">${escapeHtml(timeRange || "To be confirmed")}</div>
+                            <div style="font-size:15px;color:#111827;font-weight:600;margin-top:2px;">${escapeHtml(timeDisplay)}</div>
                           </td>
                         </tr>
                         <tr>
@@ -209,7 +243,7 @@ async function sendAppointmentConfirmationEmail(payload) {
     "Services:",
     ...formatGroupedServices(payload.serviceSelections, payload.serviceTitle).text.map((line) => `- ${line}`),
     `Date: ${payload.date}`,
-    `Time: ${payload.timeRange || "To be confirmed"}`,
+    `Time: ${formatTimeRangeTo12Hour(payload.timeRange)}`,
     `Mobile: ${payload.mobile}`,
     `Estimated Total: ${payload.totalAmount ?? "-"}`,
     payload.notes ? `Notes: ${payload.notes}` : "",
