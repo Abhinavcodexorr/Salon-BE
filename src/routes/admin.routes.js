@@ -29,6 +29,8 @@ router.get("/users", superadminAuth, adminController.listUsers);
 /** Same as GET /users — customer accounts (OTP users) with wallet; use for “Customers” screen. */
 router.get("/customers", superadminAuth, adminController.listUsers);
 router.get("/appointments", superadminAuth, adminController.listAppointments);
+router.get("/appointments-overview", superadminAuth, adminController.getAppointmentsOverview);
+router.get("/appointments-booked-slots", superadminAuth, adminController.getBookedSlots);
 router.get(
   "/appointments/:appointmentId/wallet",
   superadminAuth,

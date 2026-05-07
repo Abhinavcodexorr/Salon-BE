@@ -4,6 +4,14 @@ const Notification = require("../models/Notification");
 const Service = require("../models/Service");
 const { AppError } = require("../middleware/errorHandler");
 const { success } = require("../utils/response");
+const {
+  generateSlots,
+  parseTimeToMinutes,
+  minutesToTimeStr,
+  overlaps,
+  SLOT_INTERVAL,
+} = require("../config/slots");
+const { resolveSalonBookingWindow } = require("../services/salonAvailability.service");
 
 /**
  * Normalizes admin payload: each block has `subheading`, optional block `duration` or `time` (minutes),
@@ -472,6 +480,141 @@ async function listAppointments(req, res, next) {
   }
 }
 
+function isValidYmd(str) {
+  if (typeof str !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(str)) return false;
+  const d = new Date(`${str}T00:00:00.000Z`);
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === str;
+}
+
+function addDaysYmd(ymd, days) {
+  const d = new Date(`${ymd}T00:00:00.000Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+async function getAppointmentsOverview(req, res, next) {
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const fromDate = String(req.query.fromDate || today).trim();
+    const toDate = String(req.query.toDate || addDaysYmd(fromDate, 14)).trim();
+
+    if (!isValidYmd(fromDate) || !isValidYmd(toDate)) {
+      throw new AppError("fromDate and toDate must be YYYY-MM-DD", 400);
+    }
+    if (fromDate > toDate) {
+      throw new AppError("fromDate must be less than or equal to toDate", 400);
+    }
+
+    const [{ from: openFrom, to: openTo }, appointments] = await Promise.all([
+      resolveSalonBookingWindow(),
+      Appointment.find({
+        date: { $gte: fromDate, $lte: toDate },
+        status: { $nin: ["cancelled"] },
+      })
+        .sort({ date: 1, time: 1, createdAt: 1 })
+        .lean(),
+    ]);
+
+    const allSlots = generateSlots(openFrom, openTo);
+    const closeMins = parseTimeToMinutes(openTo);
+    const byDate = new Map();
+    const dates = [];
+    for (let d = fromDate; d <= toDate; d = addDaysYmd(d, 1)) {
+      byDate.set(d, []);
+      dates.push(d);
+    }
+    for (const apt of appointments) {
+      if (!byDate.has(apt.date)) continue;
+      byDate.get(apt.date).push(apt);
+    }
+
+    const overview = dates.map((date) => {
+      const dayApts = byDate.get(date) || [];
+      const booked = dayApts
+        .filter((a) => a.time)
+        .map((a) => {
+          const startMins = parseTimeToMinutes(a.time);
+          const dur = Math.max(1, Number(a.duration) || 30);
+          const endMins = startMins + dur;
+          return {
+            appointmentId: String(a._id),
+            start: a.time,
+            end: minutesToTimeStr(endMins),
+            duration: dur,
+            customerName: a.name,
+            service: a.service || "",
+          };
+        });
+
+      const availableSlots = allSlots.filter((slot) => {
+        const slotStart = parseTimeToMinutes(slot);
+        const slotEnd = slotStart + SLOT_INTERVAL;
+        if (slotEnd > closeMins) return false;
+        return !booked.some((b) =>
+          overlaps(slotStart, slotEnd, parseTimeToMinutes(b.start), parseTimeToMinutes(b.end))
+        );
+      });
+
+      return {
+        date,
+        booked,
+        availableSlots,
+      };
+    });
+
+    success(
+      res,
+      {
+        fromDate,
+        toDate,
+        salonHours: { from: openFrom, to: openTo, slotIntervalMinutes: SLOT_INTERVAL },
+        dates: overview,
+      },
+      "Appointments overview retrieved successfully"
+    );
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function getBookedSlots(req, res, next) {
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const fromDate = String(req.query.fromDate || today).trim();
+    const toDate = String(req.query.toDate || addDaysYmd(fromDate, 14)).trim();
+
+    if (!isValidYmd(fromDate) || !isValidYmd(toDate)) {
+      throw new AppError("fromDate and toDate must be YYYY-MM-DD", 400);
+    }
+    if (fromDate > toDate) {
+      throw new AppError("fromDate must be less than or equal to toDate", 400);
+    }
+
+    const appointments = await Appointment.find({
+      date: { $gte: fromDate, $lte: toDate },
+      status: { $nin: ["cancelled"] },
+      time: { $exists: true, $ne: null },
+    })
+      .sort({ date: 1, time: 1, createdAt: 1 })
+      .lean();
+
+    const bookedSlots = appointments.map((a) => {
+      const start = String(a.time).trim();
+      const duration = Math.max(1, Number(a.duration) || 30);
+      const end = minutesToTimeStr(parseTimeToMinutes(start) + duration);
+      return {
+        date: a.date,
+        start,
+        end,
+      };
+    });
+
+    success(res, { bookedSlots }, "Booked slots retrieved successfully");
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   listServices,
   getServiceById,
@@ -481,6 +624,8 @@ module.exports = {
   seedServices,
   listUsers,
   listAppointments,
+  getAppointmentsOverview,
+  getBookedSlots,
   getAdminCounts,
   getDashboard,
 };
