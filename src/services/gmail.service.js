@@ -49,7 +49,11 @@ function formatGroupedServices(serviceSelections, fallbackTitle) {
     const serviceName = String(row?.serviceName || "Service").trim() || "Service";
     const subheading = String(row?.subheading || "").trim();
     const item = String(row?.serviceItemName || "").trim();
-    const label = [subheading, item].filter(Boolean).join(" - ") || "Standard";
+    const rawLabel = [subheading, item].filter(Boolean).join(" - ") || "Standard";
+    // Avoid repeating heading in line items, e.g. "Body Spa - Full Body Scrub".
+    const escapedServiceName = serviceName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const headingPrefixRegex = new RegExp(`^${escapedServiceName}\\s*[-:>]*\\s*`, "i");
+    const label = rawLabel.replace(headingPrefixRegex, "").trim() || "Standard";
     if (!groups.has(serviceName)) groups.set(serviceName, []);
     groups.get(serviceName).push(label);
   }
@@ -130,6 +134,10 @@ function buildAppointmentEmailTemplate(payload) {
                   Need to reschedule? Reply to this email and our team will assist you.
                 </p>
                 <p style="margin:14px 0 0 0;font-size:13px;color:#666;">Thank you for choosing BLOSM.</p>
+                <p style="margin:16px 0 0 0;padding-top:12px;border-top:1px solid #e8dcbf;font-size:12px;line-height:1.6;color:#7a7a7a;">
+                  This is a no-reply email. Please do not reply to this message.<br/>
+                  © ${new Date().getFullYear()} BLOSM. All rights reserved.
+                </p>
               </td>
             </tr>
           </table>
@@ -172,6 +180,8 @@ async function sendAppointmentConfirmationEmail(payload) {
     payload.notes ? `Notes: ${payload.notes}` : "",
     "",
     "Thank you for choosing Blosm.",
+    "This is a no-reply email. Please do not reply to this message.",
+    `© ${new Date().getFullYear()} BLOSM. All rights reserved.`,
   ]
     .filter(Boolean)
     .join("\n");
