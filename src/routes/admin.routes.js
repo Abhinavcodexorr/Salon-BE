@@ -12,6 +12,7 @@ router.post("/logout", adminAuthController.logout);
 
 /** Header bell / badges: appointments total + unread notifications — admin JWT */
 router.get("/counts", superadminAuth, adminController.getAdminCounts);
+router.post("/notifications/mark-read", superadminAuth, adminController.markNotificationsRead);
 
 /** Dashboard cards: services, appointments, customers — admin JWT */
 router.get("/dashboard", superadminAuth, adminController.getDashboard);

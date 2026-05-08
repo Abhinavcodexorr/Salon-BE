@@ -360,6 +360,55 @@ async function getAdminCounts(req, res, next) {
 }
 
 /**
+ * Marks notifications as read for admin panel counters.
+ * Body:
+ * - { type?: "appointment" | "system" } to mark all unread of a type (default: appointment)
+ * - { notificationIds: string[] } to mark selected notifications
+ */
+async function markNotificationsRead(req, res, next) {
+  try {
+    const { notificationIds, type } = req.body || {};
+    let filter;
+
+    if (Array.isArray(notificationIds) && notificationIds.length > 0) {
+      const validIds = notificationIds
+        .map((id) => String(id).trim())
+        .filter((id) => mongoose.Types.ObjectId.isValid(id));
+      if (validIds.length === 0) {
+        throw new AppError("notificationIds must contain valid ObjectIds", 400);
+      }
+      filter = { _id: { $in: validIds }, read: false };
+    } else {
+      const markType = type === "system" ? "system" : "appointment";
+      filter = { type: markType, read: false };
+    }
+
+    const updateResult = await Notification.updateMany(filter, { $set: { read: true } });
+    const modified = Number(updateResult.modifiedCount || 0);
+
+    const [unread, read] = await Promise.all([
+      Notification.countDocuments({ type: "appointment", read: false }),
+      Notification.countDocuments({ type: "appointment", read: true }),
+    ]);
+
+    success(
+      res,
+      {
+        updated: modified,
+        appointmentNotifications: {
+          unread,
+          read,
+          total: unread + read,
+        },
+      },
+      "Notifications marked as read"
+    );
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
  * Dashboard KPIs (admin JWT). Services = documents still in DB (delete removes rows; no soft-delete field).
  */
 async function getDashboard(req, res, next) {
@@ -677,5 +726,6 @@ module.exports = {
   getAppointmentsOverview,
   getBookedSlots,
   getAdminCounts,
+  markNotificationsRead,
   getDashboard,
 };
