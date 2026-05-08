@@ -536,11 +536,16 @@ async function create(req, res, next) {
         }`,
         appointmentId: appointment._id,
       });
-      const nm = String(name).trim();
-      const em = String(email).trim().toLowerCase();
-      await User.findByIdAndUpdate(req.userId, {
-        $set: { name: nm, email: em },
-      });
+      // Persist booking name/email only on the user's first-ever appointment.
+      // From 2nd booking onward, do not overwrite profile identity from booking form.
+      const bookingCount = await Appointment.countDocuments({ userId: req.userId });
+      if (bookingCount === 1) {
+        const nm = String(name).trim();
+        const em = String(email).trim().toLowerCase();
+        await User.findByIdAndUpdate(req.userId, {
+          $set: { name: nm, email: em },
+        });
+      }
     }
 
     success(res, appointment, "Appointment created", 201);
