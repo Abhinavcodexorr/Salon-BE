@@ -334,9 +334,11 @@ async function listUsers(req, res, next) {
 /** Header notification bell + badge: total appointments + unread customer notifications (admin JWT). */
 async function getAdminCounts(req, res, next) {
   try {
-    const [appointmentsCount, notificationCount] = await Promise.all([
+    const [appointmentsCount, notificationCount, unreadAppointmentNotifications, readAppointmentNotifications] = await Promise.all([
       Appointment.countDocuments({}),
       Notification.countDocuments({ read: false }),
+      Notification.countDocuments({ type: "appointment", read: false }),
+      Notification.countDocuments({ type: "appointment", read: true }),
     ]);
     success(
       res,
@@ -344,6 +346,11 @@ async function getAdminCounts(req, res, next) {
         appointmentsCount,
         appointmentCount: appointmentsCount,
         notificationCount,
+        appointmentNotifications: {
+          unread: unreadAppointmentNotifications,
+          read: readAppointmentNotifications,
+          total: unreadAppointmentNotifications + readAppointmentNotifications,
+        },
       },
       "Counts retrieved successfully"
     );
