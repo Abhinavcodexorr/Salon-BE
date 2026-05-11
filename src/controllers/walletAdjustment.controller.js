@@ -197,22 +197,36 @@ async function adjustWalletByAppointmentId(req, res, next) {
         adminId: req.adminId || null,
       });
 
+      // Return SAME shape as GET /wallet so frontend can just replace state.
       success(
         res,
         {
+          appointment: {
+            _id: appointment._id,
+            date: appointment.date,
+            service: appointment.service,
+          },
           user: {
             _id: updated._id,
+            name: updated.name,
+            email: updated.email,
+            mobile: updated.mobile,
+            countryCode: updated.countryCode,
             wallet: balanceAfter,
           },
-          adjustment: {
-            _id: log._id,
-            type: log.type,
-            amount: log.amount,
-            balanceBefore: log.balanceBefore,
-            balanceAfter: log.balanceAfter,
-            note: log.note,
-            createdAt: log.createdAt,
-          },
+          adjustments: [
+            mapAdjustment({
+              _id: log._id,
+              appointmentId: log.appointmentId,
+              type: log.type,
+              amount: log.amount,
+              balanceBefore: log.balanceBefore,
+              balanceAfter: log.balanceAfter,
+              note: log.note,
+              createdAt: log.createdAt,
+              adminId: null,
+            }),
+          ],
         },
         "Wallet adjusted successfully",
         200
