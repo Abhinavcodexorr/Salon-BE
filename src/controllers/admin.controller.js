@@ -2,7 +2,6 @@ const User = require("../models/User");
 const Appointment = require("../models/Appointment");
 const Notification = require("../models/Notification");
 const Service = require("../models/Service");
-const WalletAdjustment = require("../models/WalletAdjustment");
 const { AppError } = require("../middleware/errorHandler");
 const { success } = require("../utils/response");
 const {
@@ -503,60 +502,18 @@ async function listAppointments(req, res, next) {
       Appointment.countDocuments(filter),
     ]);
 
-    const appointmentIds = raw.map((a) => a._id);
-    let walletMap = new Map();
-    if (appointmentIds.length > 0) {
-      const walletByAppointment = await WalletAdjustment.aggregate([
-        { $match: { appointmentId: { $in: appointmentIds } } },
-        {
-          $group: {
-            _id: "$appointmentId",
-            debitTotal: {
-              $sum: {
-                $cond: [{ $eq: ["$type", "debit"] }, "$amount", 0],
-              },
-            },
-            creditTotal: {
-              $sum: {
-                $cond: [{ $eq: ["$type", "credit"] }, "$amount", 0],
-              },
-            },
-          },
-        },
-      ]);
-      walletMap = new Map(
-        walletByAppointment.map((row) => [
-          String(row._id),
-          {
-            debitTotal: Math.max(0, Number(row.debitTotal) || 0),
-            creditTotal: Math.max(0, Number(row.creditTotal) || 0),
-          },
-        ])
-      );
-    }
-
     const appointments = raw.map((a) => {
-      const baseTotalAmount = Math.max(0, Number(a.totalAmount) || 0);
-      const wallet = walletMap.get(String(a._id)) || { debitTotal: 0, creditTotal: 0 };
-      const walletAdjustmentAmount = Math.max(0, wallet.debitTotal - wallet.creditTotal);
-      const adjustedTotalAmount = Math.max(0, baseTotalAmount - walletAdjustmentAmount);
       const groupedServices = buildGroupedServicesFromAppointment(a);
       const { serviceSelections, service, serviceId, ...rest } = a;
       if (!a.userId || typeof a.userId !== "object") {
         return {
           ...rest,
-          totalAmount: adjustedTotalAmount,
-          baseTotalAmount,
-          walletAdjustmentAmount,
           services: groupedServices,
         };
       }
       const w = a.userId.wallet;
       return {
         ...rest,
-        totalAmount: adjustedTotalAmount,
-        baseTotalAmount,
-        walletAdjustmentAmount,
         userId: {
           ...a.userId,
           wallet: w != null && w !== "" ? Number(w) : 0,
