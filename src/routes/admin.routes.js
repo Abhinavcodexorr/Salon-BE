@@ -37,6 +37,12 @@ router.get(
   superadminAuth,
   walletAdjustmentController.getWalletByAppointmentId
 );
+/** Wallet history limited to ONE particular appointment only (not full user history). */
+router.get(
+  "/appointments/:appointmentId/wallet/history",
+  superadminAuth,
+  walletAdjustmentController.getAppointmentWalletHistory
+);
 router.post(
   "/appointments/:appointmentId/wallet/adjust",
   superadminAuth,
