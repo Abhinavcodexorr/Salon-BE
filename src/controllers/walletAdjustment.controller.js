@@ -16,9 +16,24 @@ function resolveUserId(appointment) {
   return ref && typeof ref === "object" && ref._id != null ? ref._id : ref;
 }
 
+function mapAdjustment(a) {
+  return {
+    _id: a._id,
+    appointmentId: a.appointmentId,
+    type: a.type,
+    amount: a.amount,
+    balanceBefore: a.balanceBefore,
+    balanceAfter: a.balanceAfter,
+    note: a.note,
+    createdAt: a.createdAt,
+    adminEmail: a.adminId && typeof a.adminId === "object" ? a.adminId.email : null,
+  };
+}
+
 /**
- * GET — load customer wallet + full adjustment history for the user linked to this appointment.
- * Used when opening the appointment wallet popup.
+ * GET — wallet popup data for an appointment: user info, current wallet balance,
+ * and ONLY the latest single adjustment made on this appointment (as a 1-item
+ * array so existing frontend shape stays the same).
  */
 async function getWalletByAppointmentId(req, res, next) {
   try {
@@ -32,12 +47,13 @@ async function getWalletByAppointmentId(req, res, next) {
     const user = await User.findById(appointment.userId).lean();
     if (!user) throw new AppError("User not found", 404);
 
-    const adjustments = await WalletAdjustment.find({ userId: user._id })
+    const latest = await WalletAdjustment.findOne({
+      userId: user._id,
+      appointmentId: appointment._id,
+    })
       .sort({ createdAt: -1 })
       .populate("adminId", "email")
       .lean();
-
-    const wallet = toWallet(user.wallet);
 
     success(
       res,
@@ -53,19 +69,9 @@ async function getWalletByAppointmentId(req, res, next) {
           email: user.email,
           mobile: user.mobile,
           countryCode: user.countryCode,
-          wallet,
+          wallet: toWallet(user.wallet),
         },
-        adjustments: adjustments.map((a) => ({
-          _id: a._id,
-          appointmentId: a.appointmentId,
-          type: a.type,
-          amount: a.amount,
-          balanceBefore: a.balanceBefore,
-          balanceAfter: a.balanceAfter,
-          note: a.note,
-          createdAt: a.createdAt,
-          adminEmail: a.adminId && typeof a.adminId === "object" ? a.adminId.email : null,
-        })),
+        adjustments: latest ? [mapAdjustment(latest)] : [],
       },
       "Wallet context loaded successfully"
     );
@@ -75,9 +81,9 @@ async function getWalletByAppointmentId(req, res, next) {
 }
 
 /**
- * GET — wallet adjustment history scoped to a SINGLE appointment only.
- * Returns just the credits/debits that were made against this specific
- * appointment, not the user's full wallet history.
+ * GET — full wallet adjustment history scoped to a SINGLE appointment.
+ * Returns every credit/debit ever made against this specific appointment,
+ * sorted newest first.
  */
 async function getAppointmentWalletHistory(req, res, next) {
   try {
@@ -99,22 +105,12 @@ async function getAppointmentWalletHistory(req, res, next) {
       .populate("adminId", "email")
       .lean();
 
-    const totals = adjustments.reduce(
-      (acc, a) => {
-        if (a.type === "credit") acc.totalCredit += Number(a.amount) || 0;
-        else if (a.type === "debit") acc.totalDebit += Number(a.amount) || 0;
-        return acc;
-      },
-      { totalCredit: 0, totalDebit: 0 }
-    );
-
     success(
       res,
       {
         appointment: {
           _id: appointment._id,
           date: appointment.date,
-          time: appointment.time,
           service: appointment.service,
         },
         user: {
@@ -125,25 +121,9 @@ async function getAppointmentWalletHistory(req, res, next) {
           countryCode: user.countryCode,
           wallet: toWallet(user.wallet),
         },
-        totals: {
-          count: adjustments.length,
-          totalCredit: totals.totalCredit,
-          totalDebit: totals.totalDebit,
-          netChange: totals.totalCredit - totals.totalDebit,
-        },
-        adjustments: adjustments.map((a) => ({
-          _id: a._id,
-          appointmentId: a.appointmentId,
-          type: a.type,
-          amount: a.amount,
-          balanceBefore: a.balanceBefore,
-          balanceAfter: a.balanceAfter,
-          note: a.note,
-          createdAt: a.createdAt,
-          adminEmail: a.adminId && typeof a.adminId === "object" ? a.adminId.email : null,
-        })),
+        adjustments: adjustments.map(mapAdjustment),
       },
-      "Appointment wallet history loaded successfully"
+      "Wallet history loaded successfully"
     );
   } catch (err) {
     next(err);
