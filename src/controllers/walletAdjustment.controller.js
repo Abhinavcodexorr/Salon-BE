@@ -81,6 +81,108 @@ async function getWalletByAppointmentId(req, res, next) {
 }
 
 /**
+ * GET — wallet + cumulative adjustment for an appointment.
+ * Returns the user's current wallet balance AND a SINGLE cumulative
+ * adjustment entry (one row per appointment) representing the NET
+ * credit/debit made against this appointment so far.
+ *
+ * Cumulative entry shape (same fields as a normal adjustment):
+ *   - type           : "credit" if net >= 0 else "debit"
+ *   - amount         : abs(netAmount) = |sum(credits) - sum(debits)|
+ *   - balanceBefore  : balanceBefore from the FIRST (earliest) entry
+ *   - balanceAfter   : balanceAfter  from the LATEST  (newest) entry
+ *   - createdAt      : timestamp of the LATEST entry
+ *   - note           : last non-empty note (most recent) if any
+ *   - adminEmail     : email of the admin on the LATEST entry
+ *   - totalCredit / totalDebit / count : breakdown for the UI
+ *
+ * If no adjustments exist yet, `adjustments` is returned as an empty array.
+ */
+async function getAppointmentWalletCumulative(req, res, next) {
+  try {
+    const { appointmentId } = req.params;
+    const appointment = await Appointment.findById(appointmentId).lean();
+    if (!appointment) throw new AppError("Appointment not found", 404);
+    if (!appointment.userId) {
+      throw new AppError("This appointment has no linked customer (guest). Wallet is only for logged-in users.", 400);
+    }
+
+    const user = await User.findById(appointment.userId).lean();
+    if (!user) throw new AppError("User not found", 404);
+
+    const entries = await WalletAdjustment.find({
+      userId: user._id,
+      appointmentId: appointment._id,
+    })
+      .sort({ createdAt: 1 })
+      .populate("adminId", "email")
+      .lean();
+
+    let cumulative = null;
+    if (entries.length > 0) {
+      const first = entries[0];
+      const last = entries[entries.length - 1];
+
+      let totalCredit = 0;
+      let totalDebit = 0;
+      let lastNote = null;
+      for (const e of entries) {
+        const amt = toWallet(e.amount);
+        if (e.type === "credit") totalCredit += amt;
+        else if (e.type === "debit") totalDebit += amt;
+      }
+      for (let i = entries.length - 1; i >= 0; i--) {
+        const n = entries[i].note;
+        if (n != null && String(n).trim()) {
+          lastNote = String(n).trim();
+          break;
+        }
+      }
+
+      const net = totalCredit - totalDebit;
+      cumulative = {
+        _id: last._id,
+        appointmentId: appointment._id,
+        type: net >= 0 ? "credit" : "debit",
+        amount: Math.abs(net),
+        balanceBefore: toWallet(first.balanceBefore),
+        balanceAfter: toWallet(last.balanceAfter),
+        note: lastNote,
+        createdAt: last.createdAt,
+        adminEmail:
+          last.adminId && typeof last.adminId === "object" ? last.adminId.email : null,
+        totalCredit,
+        totalDebit,
+        count: entries.length,
+      };
+    }
+
+    success(
+      res,
+      {
+        appointment: {
+          _id: appointment._id,
+          date: appointment.date,
+          service: appointment.service,
+        },
+        user: {
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+          mobile: user.mobile,
+          countryCode: user.countryCode,
+          wallet: toWallet(user.wallet),
+        },
+        adjustments: cumulative ? [cumulative] : [],
+      },
+      "Wallet cumulative loaded successfully"
+    );
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
  * GET — full wallet adjustment history scoped to a SINGLE appointment.
  * Returns every credit/debit ever made against this specific appointment,
  * sorted newest first.
@@ -246,6 +348,7 @@ async function adjustWalletByAppointmentId(req, res, next) {
 
 module.exports = {
   getWalletByAppointmentId,
+  getAppointmentWalletCumulative,
   getAppointmentWalletHistory,
   adjustWalletByAppointmentId,
 };

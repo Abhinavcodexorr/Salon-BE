@@ -37,6 +37,12 @@ router.get(
   superadminAuth,
   walletAdjustmentController.getWalletByAppointmentId
 );
+/** Wallet + ONE cumulative adjustment entry (net credit/debit) for this appointment. */
+router.get(
+  "/appointments/:appointmentId/wallet/cumulative",
+  superadminAuth,
+  walletAdjustmentController.getAppointmentWalletCumulative
+);
 /** Wallet history limited to ONE particular appointment only (not full user history). */
 router.get(
   "/appointments/:appointmentId/wallet/history",
