@@ -3,6 +3,9 @@ const WalletAdjustment = require("../models/WalletAdjustment");
 const { AppError } = require("../middleware/errorHandler");
 
 const REFERRAL_BONUS = 100;
+const SIGNUP_BONUS = 100;
+/** Prefix used on WalletAdjustment.note when crediting a referrer. */
+const REFERRAL_BONUS_NOTE_PREFIX = "Referral bonus for invite code used by";
 
 function normalizeInviteCode(inviteCode) {
   const normalized = String(inviteCode || "").replace(/\D/g, "");
@@ -89,7 +92,7 @@ async function redeemInviteCode({ userId, inviteCode }) {
       amount: REFERRAL_BONUS,
       balanceBefore,
       balanceAfter,
-      note: `Referral bonus for invite code used by ${updatedInvitee.mobile}`,
+      note: `${REFERRAL_BONUS_NOTE_PREFIX} ${updatedInvitee.mobile}`,
       adminId: null,
     });
   } catch (logErr) {
@@ -123,4 +126,9 @@ async function redeemInviteCode({ userId, inviteCode }) {
   };
 }
 
-module.exports = { redeemInviteCode };
+module.exports = {
+  redeemInviteCode,
+  REFERRAL_BONUS,
+  SIGNUP_BONUS,
+  REFERRAL_BONUS_NOTE_PREFIX,
+};
