@@ -554,10 +554,60 @@ async function listAppointments(req, res, next) {
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(parseInt(limit))
-        .populate("userId", "mobile countryCode name email wallet")
+        .populate(
+          "userId",
+          "mobile countryCode name email wallet referredBy referredInviteCode referralRedeemedAt"
+        )
         .lean(),
       Appointment.countDocuments(filter),
     ]);
+
+    const userIds = [];
+    const seen = new Set();
+    for (const a of raw) {
+      if (a.userId && typeof a.userId === "object" && a.userId._id) {
+        const key = String(a.userId._id);
+        if (!seen.has(key)) {
+          seen.add(key);
+          userIds.push(a.userId._id);
+        }
+      }
+    }
+
+    let referralInfo = new Map();
+    if (userIds.length > 0) {
+      const referralNoteRegex = new RegExp(
+        `^${escapeRegex(REFERRAL_BONUS_NOTE_PREFIX)}`,
+        "i"
+      );
+      const referralAgg = await WalletAdjustment.aggregate([
+        {
+          $match: {
+            userId: { $in: userIds },
+            type: "credit",
+            note: { $regex: referralNoteRegex },
+          },
+        },
+        {
+          $group: {
+            _id: "$userId",
+            referralBonus: { $sum: "$amount" },
+            referralCount: { $sum: 1 },
+            lastReferralAt: { $max: "$createdAt" },
+          },
+        },
+      ]);
+      referralInfo = new Map(
+        referralAgg.map((row) => [
+          String(row._id),
+          {
+            referralBonus: Number(row.referralBonus || 0),
+            referralCount: Number(row.referralCount || 0),
+            lastReferralAt: row.lastReferralAt || null,
+          },
+        ])
+      );
+    }
 
     const appointments = raw.map((a) => {
       const groupedServices = buildGroupedServicesFromAppointment(a);
@@ -569,11 +619,26 @@ async function listAppointments(req, res, next) {
         };
       }
       const w = a.userId.wallet;
+      const ref = referralInfo.get(String(a.userId._id));
+      const referralBonus = ref ? ref.referralBonus : 0;
+      const referralCount = ref ? ref.referralCount : 0;
+      const lastReferralAt = ref ? ref.lastReferralAt : null;
       return {
         ...rest,
         userId: {
           ...a.userId,
           wallet: w != null && w !== "" ? Number(w) : 0,
+          bonuses: {
+            signupBonus: SIGNUP_BONUS,
+            referralBonusPerInvite: REFERRAL_BONUS,
+            referralBonus,
+            referralCount,
+            hasReferralBonus: referralBonus > 0,
+            lastReferralAt,
+            referred: Boolean(a.userId.referredBy),
+            referredInviteCode: a.userId.referredInviteCode || null,
+            referralRedeemedAt: a.userId.referralRedeemedAt || null,
+          },
         },
         services: groupedServices,
       };
