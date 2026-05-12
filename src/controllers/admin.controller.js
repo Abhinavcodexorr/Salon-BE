@@ -2,8 +2,19 @@ const User = require("../models/User");
 const Appointment = require("../models/Appointment");
 const Notification = require("../models/Notification");
 const Service = require("../models/Service");
+const WalletAdjustment = require("../models/WalletAdjustment");
 const { AppError } = require("../middleware/errorHandler");
 const { success } = require("../utils/response");
+const {
+  SIGNUP_BONUS,
+  REFERRAL_BONUS,
+  REFERRAL_BONUS_NOTE_PREFIX,
+} = require("../services/referral.service");
+
+/** Escapes regex specials so a string can be used safely inside `new RegExp(...)`. */
+function escapeRegex(str) {
+  return String(str).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 const {
   generateSlots,
   parseTimeToMinutes,
@@ -278,7 +289,11 @@ async function listUsers(req, res, next) {
         .then(async (users) => {
           if (users.length === 0) return [];
           const userIds = users.map((u) => u._id);
-          const [latestByUser, withCount] = await Promise.all([
+          const referralNoteRegex = new RegExp(
+            `^${escapeRegex(REFERRAL_BONUS_NOTE_PREFIX)}`,
+            "i"
+          );
+          const [latestByUser, withCount, referralAgg] = await Promise.all([
             Appointment.aggregate([
               { $match: { userId: { $in: userIds } } },
               { $sort: { createdAt: -1 } },
@@ -296,20 +311,62 @@ async function listUsers(req, res, next) {
                 return count;
               })
             ),
+            WalletAdjustment.aggregate([
+              {
+                $match: {
+                  userId: { $in: userIds },
+                  type: "credit",
+                  note: { $regex: referralNoteRegex },
+                },
+              },
+              {
+                $group: {
+                  _id: "$userId",
+                  referralBonus: { $sum: "$amount" },
+                  referralCount: { $sum: 1 },
+                  lastReferralAt: { $max: "$createdAt" },
+                },
+              },
+            ]),
           ]);
           const aptInfo = new Map(
             latestByUser.map((row) => [String(row._id), { name: row.name, email: row.email }])
+          );
+          const referralInfo = new Map(
+            referralAgg.map((row) => [
+              String(row._id),
+              {
+                referralBonus: Number(row.referralBonus || 0),
+                referralCount: Number(row.referralCount || 0),
+                lastReferralAt: row.lastReferralAt || null,
+              },
+            ])
           );
           return users.map((u, i) => {
             const fromApt = aptInfo.get(String(u._id));
             const profileName = u.name && String(u.name).trim();
             const profileEmail = u.email && String(u.email).trim();
+            const ref = referralInfo.get(String(u._id));
+            const referralBonus = ref ? ref.referralBonus : 0;
+            const referralCount = ref ? ref.referralCount : 0;
+            const lastReferralAt = ref ? ref.lastReferralAt : null;
             return {
               ...u,
               name: profileName || (fromApt?.name && String(fromApt.name).trim()) || null,
               email: profileEmail || (fromApt?.email && String(fromApt.email).trim().toLowerCase()) || null,
               wallet: u.wallet != null && u.wallet !== "" ? Number(u.wallet) : 0,
               _count: { appointments: withCount[i] },
+              bonuses: {
+                signupBonus: SIGNUP_BONUS,
+                referralBonusPerInvite: REFERRAL_BONUS,
+                referralBonus,
+                referralCount,
+                hasReferralBonus: referralBonus > 0,
+                lastReferralAt,
+                referred: Boolean(u.referredBy),
+                referredInviteCode: u.referredInviteCode || null,
+                referralRedeemedAt: u.referralRedeemedAt || null,
+              },
             };
           });
         }),
