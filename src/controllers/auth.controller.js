@@ -2,30 +2,39 @@ const authService = require("../services/auth.service");
 const { AppError } = require("../middleware/errorHandler");
 const { success } = require("../utils/response");
 
-async function sendOtp(req, res, next) {
+async function signup(req, res, next) {
   try {
-    const { mobile, countryCode } = req.body;
-    if (!mobile || !countryCode) {
-      throw new AppError("Mobile and country code required", 400);
+    const { username, email, mobile, countryCode, password } = req.body;
+    if (!username || !email || !mobile || !countryCode || !password) {
+      throw new AppError(
+        "Username, email, mobile, country code and password are required",
+        400
+      );
     }
-    await authService.sendOtp(mobile, countryCode);
-    success(res, null, "OTP sent successfully");
+    const result = await authService.signup({
+      username,
+      email,
+      mobile,
+      countryCode,
+      password,
+    });
+    success(res, result, "Signup successful", 201);
   } catch (err) {
     next(err);
   }
 }
 
-async function verifyOtp(req, res, next) {
+async function login(req, res, next) {
   try {
-    const { mobile, countryCode, otp } = req.body;
-    if (!mobile || !countryCode || !otp) {
-      throw new AppError("Mobile, country code and OTP required", 400);
+    const { email, password } = req.body;
+    if (!email || !password) {
+      throw new AppError("Email and password are required", 400);
     }
-    const result = await authService.verifyOtpAndLogin(mobile, countryCode, otp);
+    const result = await authService.login({ email, password });
     success(res, result, "Login successful");
   } catch (err) {
     next(err);
   }
 }
 
-module.exports = { sendOtp, verifyOtp };
+module.exports = { signup, login };

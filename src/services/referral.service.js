@@ -2,7 +2,7 @@ const User = require("../models/User");
 const WalletAdjustment = require("../models/WalletAdjustment");
 const { AppError } = require("../middleware/errorHandler");
 
-const REFERRAL_BONUS = 100;
+const REFERRAL_BONUS = 50;
 const SIGNUP_BONUS = 100;
 /** Prefix used on WalletAdjustment.note when crediting a referrer. */
 const REFERRAL_BONUS_NOTE_PREFIX = "Referral bonus for invite code used by";

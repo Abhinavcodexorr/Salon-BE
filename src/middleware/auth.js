@@ -27,7 +27,7 @@ const auth = (req, res, next) => {
       return res.status(401).json(
         unauthorizedPayload(
           "Customer login token required",
-          "This token is not a customer session (e.g. admin login uses a different token). Use OTP login for customer APIs."
+          "This token is not a customer session (e.g. admin login uses a different token). Use customer login for user APIs."
         )
       );
     }
