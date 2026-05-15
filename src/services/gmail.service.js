@@ -117,7 +117,21 @@ function buildAppointmentEmailTemplate(payload) {
     notes,
     mobile,
     serviceSelections,
+    emailKind = "confirmation",
+    hoursBefore = 2,
   } = payload;
+  const isReminder = emailKind === "reminder";
+  const badgeLabel = isReminder ? "Reminder" : "Confirmed";
+  const headline = isReminder
+    ? `Your Appointment Is in ${escapeHtml(hoursBefore)} Hours`
+    : "Your Appointment Is Booked";
+  const introText = isReminder
+    ? "This is a friendly reminder about your upcoming appointment at BLOSM. We look forward to seeing you soon."
+    : "Thank you for booking with BLOSM. Your appointment is confirmed and we are excited to host you.";
+  const footerHelp = isReminder
+    ? "Need to reschedule? Please contact BLOSM support as soon as possible."
+    : "Need to reschedule? Please contact BLOSM support for assistance.";
+  const footerThanks = isReminder ? "See you soon at BLOSM." : "Thank you for choosing BLOSM.";
   const amountText = Number.isFinite(Number(totalAmount))
     ? `$${Number(totalAmount).toFixed(2)}`
     : "-";
@@ -140,18 +154,18 @@ function buildAppointmentEmailTemplate(payload) {
                       <div style="font-size:12px;color:#f8f2e5;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;margin-top:7px;">Luxury Hair & Beauty Studio</div>
                     </td>
                     <td align="right" valign="top">
-                      <span style="display:inline-block;padding:8px 13px;border-radius:999px;background:#ffffff;color:#6b5630;font-size:12px;font-weight:700;">Confirmed</span>
+                      <span style="display:inline-block;padding:8px 13px;border-radius:999px;background:#ffffff;color:#6b5630;font-size:12px;font-weight:700;">${badgeLabel}</span>
                     </td>
                   </tr>
                 </table>
-                <div style="font-size:22px;line-height:1.3;color:#ffffff;font-weight:700;margin-top:20px;">Your Appointment Is Booked</div>
+                <div style="font-size:22px;line-height:1.3;color:#ffffff;font-weight:700;margin-top:20px;">${headline}</div>
               </td>
             </tr>
             <tr>
               <td style="padding:30px 32px 14px 32px;">
                 <p style="margin:0 0 10px 0;font-size:16px;line-height:1.5;color:#111827;">Hi ${escapeHtml(customerName)},</p>
                 <p style="margin:0 0 22px 0;font-size:15px;line-height:1.65;color:#4b5563;">
-                  Thank you for booking with BLOSM. Your appointment is confirmed and we are excited to host you.
+                  ${introText}
                 </p>
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;overflow:hidden;background:#ffffff;">
                   <tr>
@@ -200,9 +214,9 @@ function buildAppointmentEmailTemplate(payload) {
             <tr>
               <td style="padding:18px 32px 22px 32px;background:#b79a58;">
                 <p style="margin:0;font-size:14px;line-height:1.6;color:#fffaf0;">
-                  Need to reschedule? Please contact BLOSM support for assistance.
+                  ${footerHelp}
                 </p>
-                <p style="margin:14px 0 0 0;font-size:13px;color:#ffffff;">Thank you for choosing BLOSM.</p>
+                <p style="margin:14px 0 0 0;font-size:13px;color:#ffffff;">${footerThanks}</p>
                 <p style="margin:16px 0 0 0;padding-top:12px;border-top:1px solid #ccb783;font-size:12px;line-height:1.6;color:#f5eddc;">
                   This is a no-reply email. Please do not reply to this message.<br/>
                   © ${new Date().getFullYear()} BLOSM. All rights reserved.
@@ -222,6 +236,71 @@ function toBase64Url(input) {
     .replace(/\+/g, "-")
     .replace(/\//g, "_")
     .replace(/=+$/g, "");
+}
+
+async function sendAppointmentReminderEmail(payload) {
+  if (!hasGmailEnvConfigured()) return { skipped: true, reason: "gmail-env-not-configured" };
+
+  const oauth2Client = getOAuth2Client();
+  oauth2Client.setCredentials({
+    refresh_token: process.env.GMAIL_REFRESH_TOKEN,
+  });
+
+  const gmail = google.gmail({ version: "v1", auth: oauth2Client });
+  const hoursBefore = payload.hoursBefore ?? 2;
+  const subject = `Blosm Appointment Reminder - ${payload.date}`;
+  const html = buildAppointmentEmailTemplate({
+    ...payload,
+    emailKind: "reminder",
+  });
+  const plainText = [
+    `Hi ${payload.customerName},`,
+    "",
+    `Reminder: your BLOSM appointment is in about ${hoursBefore} hours.`,
+    "Services:",
+    ...formatGroupedServices(payload.serviceSelections, payload.serviceTitle).text.map(
+      (line) => `- ${line}`
+    ),
+    `Date: ${payload.date}`,
+    `Time: ${formatTimeRangeTo12Hour(payload.timeRange)}`,
+    `Mobile: ${payload.mobile}`,
+    `Estimated Total: ${payload.totalAmount ?? "-"}`,
+    payload.notes ? `Notes: ${payload.notes}` : "",
+    "",
+    "Need to reschedule? Please contact BLOSM support as soon as possible.",
+    "See you soon at BLOSM.",
+    "This is a no-reply email. Please do not reply to this message.",
+    `© ${new Date().getFullYear()} BLOSM. All rights reserved.`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const message = [
+    `From: Blosm Hair & Beauty <${process.env.GMAIL_SENDER_EMAIL}>`,
+    `To: ${payload.to}`,
+    `Subject: ${subject}`,
+    "MIME-Version: 1.0",
+    'Content-Type: multipart/alternative; boundary="blosm_reminder_boundary"',
+    "",
+    "--blosm_reminder_boundary",
+    "Content-Type: text/plain; charset=UTF-8",
+    "",
+    plainText,
+    "",
+    "--blosm_reminder_boundary",
+    "Content-Type: text/html; charset=UTF-8",
+    "",
+    html,
+    "",
+    "--blosm_reminder_boundary--",
+  ].join("\n");
+
+  await gmail.users.messages.send({
+    userId: "me",
+    requestBody: { raw: toBase64Url(message) },
+  });
+
+  return { skipped: false };
 }
 
 async function sendAppointmentConfirmationEmail(payload) {
@@ -304,6 +383,7 @@ async function exchangeGmailCodeForTokens(code, overrideRedirectUri) {
 
 module.exports = {
   sendAppointmentConfirmationEmail,
+  sendAppointmentReminderEmail,
   hasGmailEnvConfigured,
   getGmailAuthorizationUrl,
   exchangeGmailCodeForTokens,

@@ -38,6 +38,8 @@ const appointmentSchema = new mongoose.Schema(
     time: { type: String, default: null },
     timeEnd: { type: String, default: null },
     status: { type: String, default: "completed", enum: ["completed", "cancelled"] },
+    /** Set once when the 2-hour-before reminder email is sent. */
+    reminderEmailSentAt: { type: Date, default: null },
     notes: { type: String, default: null },
     /** Multiple services / lines; total minutes = sum of `duration` here = root `duration`. */
     serviceSelections: { type: [appointmentServiceSelectionSchema], default: [] },
