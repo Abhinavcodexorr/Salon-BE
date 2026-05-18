@@ -52,9 +52,15 @@ const optionalAuth = (req, res, next) => {
   const token = authHeader.split(" ")[1];
   try {
     const decoded = jwt.verify(token, config.jwtSecret);
-    req.userId = decoded.userId;
+    const raw = decoded.userId;
+    if (raw != null && raw !== "") {
+      const uid = String(raw).trim();
+      if (mongoose.Types.ObjectId.isValid(uid)) {
+        req.userId = uid;
+      }
+    }
   } catch (err) {
-    // Ignore invalid token - request continues without user
+    // Ignore invalid token - request continues as guest booking
   }
   next();
 };

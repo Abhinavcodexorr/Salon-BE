@@ -341,8 +341,49 @@ async function create(req, res, next) {
       notes,
     } = req.body;
 
-    if (!name || !email || !mobile || !date) {
-      throw new AppError("Name, email, mobile and date required", 400);
+    if (!date) {
+      throw new AppError("date is required", 400);
+    }
+
+    let bookingName;
+    let bookingEmail;
+    let bookingMobile;
+    let bookingCountryCode;
+
+    if (req.userId) {
+      if (!mongoose.Types.ObjectId.isValid(String(req.userId))) {
+        throw new AppError("Invalid session — please log in again", 401);
+      }
+      const userDoc = await User.findById(req.userId)
+        .select("name username email mobile countryCode")
+        .lean();
+      if (!userDoc) {
+        throw new AppError("Session invalid — please log in again", 401);
+      }
+      bookingEmail = String(userDoc.email || "").trim().toLowerCase();
+      bookingMobile = String(userDoc.mobile || "").replace(/\D/g, "");
+      bookingCountryCode = String(userDoc.countryCode || "").trim() || "+61";
+      bookingName = String(userDoc.name ?? userDoc.username ?? "").trim();
+      if (!bookingEmail || !bookingMobile) {
+        throw new AppError(
+          "Your account is missing email or mobile. Update your profile, then book.",
+          400
+        );
+      }
+      if (!bookingName) {
+        throw new AppError(
+          "Your account is missing a display name. Update your profile, then book.",
+          400
+        );
+      }
+    } else {
+      if (!name || !email || !mobile) {
+        throw new AppError("Name, email, and mobile are required for guest booking", 400);
+      }
+      bookingName = String(name).trim();
+      bookingEmail = String(email).trim().toLowerCase();
+      bookingMobile = String(mobile).replace(/\D/g, "");
+      bookingCountryCode = countryCode || "+61";
     }
 
     const hasMulti = Array.isArray(serviceSelectionsBody) && serviceSelectionsBody.length > 0;
@@ -490,10 +531,10 @@ async function create(req, res, next) {
 
     const appointment = await Appointment.create({
       userId: req.userId || null,
-      name,
-      email,
-      mobile: mobile.replace(/\D/g, ""),
-      countryCode: countryCode || "+61",
+      name: bookingName,
+      email: bookingEmail,
+      mobile: bookingMobile,
+      countryCode: bookingCountryCode,
       service: serviceTitle,
       serviceId: rootServiceId,
       serviceName: serviceNameForDb,
@@ -510,15 +551,15 @@ async function create(req, res, next) {
 
     try {
       await sendAppointmentConfirmationEmail({
-        to: String(email).trim().toLowerCase(),
-        customerName: String(name).trim(),
+        to: bookingEmail,
+        customerName: bookingName,
         serviceTitle,
         serviceSelections,
         date,
         timeRange: timeStart ? `${timeStart}${timeEnd ? ` - ${timeEnd}` : ""}` : "To be confirmed",
         totalAmount,
         notes: notes || "",
-        mobile: `${countryCode || "+61"} ${String(mobile).replace(/\D/g, "")}`,
+        mobile: `${bookingCountryCode} ${bookingMobile}`,
       });
     } catch (mailErr) {
       // Appointment should still be created even if email sending fails.
@@ -536,22 +577,6 @@ async function create(req, res, next) {
         }`,
         appointmentId: appointment._id,
       });
-      // Persist booking name/email only on the user's first-ever appointment.
-      // From 2nd booking onward, do not overwrite profile identity from booking form.
-      const bookingCount = await Appointment.countDocuments({ userId: req.userId });
-      if (bookingCount === 1) {
-        const nm = String(name).trim();
-        const em = String(email).trim().toLowerCase();
-        const emailInUseElsewhere = await User.exists({
-          email: em,
-          _id: { $ne: req.userId },
-        });
-        const update = { name: nm };
-        if (!emailInUseElsewhere) {
-          update.email = em;
-        }
-        await User.findByIdAndUpdate(req.userId, { $set: update });
-      }
     }
 
     success(res, appointment, "Appointment created", 201);
