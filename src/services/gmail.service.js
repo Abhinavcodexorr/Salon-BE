@@ -384,6 +384,7 @@ async function exchangeGmailCodeForTokens(code, overrideRedirectUri) {
 module.exports = {
   sendAppointmentConfirmationEmail,
   sendAppointmentReminderEmail,
+  buildAppointmentEmailTemplate,
   hasGmailEnvConfigured,
   getGmailAuthorizationUrl,
   exchangeGmailCodeForTokens,
