@@ -542,9 +542,15 @@ async function create(req, res, next) {
       if (bookingCount === 1) {
         const nm = String(name).trim();
         const em = String(email).trim().toLowerCase();
-        await User.findByIdAndUpdate(req.userId, {
-          $set: { name: nm, email: em },
+        const emailInUseElsewhere = await User.exists({
+          email: em,
+          _id: { $ne: req.userId },
         });
+        const update = { name: nm };
+        if (!emailInUseElsewhere) {
+          update.email = em;
+        }
+        await User.findByIdAndUpdate(req.userId, { $set: update });
       }
     }
 
