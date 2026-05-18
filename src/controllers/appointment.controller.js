@@ -344,47 +344,25 @@ async function create(req, res, next) {
     if (!date) {
       throw new AppError("date is required", 400);
     }
-
-    let bookingName;
-    let bookingEmail;
-    let bookingMobile;
-    let bookingCountryCode;
+    if (!name || !email || !mobile) {
+      throw new AppError("Name, email, and mobile are required", 400);
+    }
 
     if (req.userId) {
       if (!mongoose.Types.ObjectId.isValid(String(req.userId))) {
         throw new AppError("Invalid session — please log in again", 401);
       }
-      const userDoc = await User.findById(req.userId)
-        .select("name username email mobile countryCode")
-        .lean();
-      if (!userDoc) {
+      const sessionUserExists = await User.exists({ _id: req.userId });
+      if (!sessionUserExists) {
         throw new AppError("Session invalid — please log in again", 401);
       }
-      bookingEmail = String(userDoc.email || "").trim().toLowerCase();
-      bookingMobile = String(userDoc.mobile || "").replace(/\D/g, "");
-      bookingCountryCode = String(userDoc.countryCode || "").trim() || "+61";
-      bookingName = String(userDoc.name ?? userDoc.username ?? "").trim();
-      if (!bookingEmail || !bookingMobile) {
-        throw new AppError(
-          "Your account is missing email or mobile. Update your profile, then book.",
-          400
-        );
-      }
-      if (!bookingName) {
-        throw new AppError(
-          "Your account is missing a display name. Update your profile, then book.",
-          400
-        );
-      }
-    } else {
-      if (!name || !email || !mobile) {
-        throw new AppError("Name, email, and mobile are required for guest booking", 400);
-      }
-      bookingName = String(name).trim();
-      bookingEmail = String(email).trim().toLowerCase();
-      bookingMobile = String(mobile).replace(/\D/g, "");
-      bookingCountryCode = countryCode || "+61";
     }
+
+    // Contact fields on the appointment are the booking form only (may differ from User profile).
+    const bookingName = String(name).trim();
+    const bookingEmail = String(email).trim().toLowerCase();
+    const bookingMobile = String(mobile).replace(/\D/g, "");
+    const bookingCountryCode = countryCode || "+61";
 
     const hasMulti = Array.isArray(serviceSelectionsBody) && serviceSelectionsBody.length > 0;
     const hasGrouped = Array.isArray(servicesBody) && servicesBody.length > 0;
