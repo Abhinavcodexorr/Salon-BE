@@ -80,6 +80,52 @@ async function findUserByContact(contact) {
   );
 }
 
+async function createUserFromContact(contact) {
+  const hashedPassword = await bcrypt.hash(crypto.randomBytes(16).toString("hex"), BCRYPT_ROUNDS);
+
+  if (contact.type === "email") {
+    const numericSeed = parseInt(
+      crypto.createHash("sha256").update(contact.email).digest("hex").slice(0, 12),
+      16
+    );
+    let placeholderMobile = String(numericSeed).slice(-10).padStart(10, "9");
+    const countryCode = "+61";
+
+    while (await User.exists({ mobile: placeholderMobile, countryCode })) {
+      placeholderMobile = String(Date.now()).slice(-10);
+    }
+
+    const username = buildUniqueUsername(contact.email.split("@")[0]);
+
+    return User.create({
+      username,
+      email: contact.email,
+      password: hashedPassword,
+      mobile: placeholderMobile,
+      countryCode,
+      name: username,
+      wallet: SIGNUP_WALLET,
+      isFirstLoginPending: true,
+      canRedeemInviteCode: true,
+    });
+  }
+
+  const email = `${contact.mobile}.${contact.countryCode.replace("+", "")}@phone.blosm.app`;
+  const username = buildUniqueUsername(`user${contact.mobile.slice(-4)}`);
+
+  return User.create({
+    username,
+    email,
+    password: hashedPassword,
+    mobile: contact.mobile,
+    countryCode: contact.countryCode,
+    name: username,
+    wallet: SIGNUP_WALLET,
+    isFirstLoginPending: true,
+    canRedeemInviteCode: true,
+  });
+}
+
 async function sendOtp({ email, mobile, countryCode }) {
   const contact = parseContact({ email, mobile, countryCode });
 
@@ -95,12 +141,17 @@ async function verifyOtp({ email, mobile, countryCode, otp }) {
   if (!code) throw new AppError("OTP is required", 400);
   if (code !== config.staticOtp) throw new AppError("Invalid OTP", 401);
 
-  const user = await findUserByContact(contact);
-  if (!user) throw new AppError("No account found", 404);
+  let user = await findUserByContact(contact);
+  let isNewUser = false;
+
+  if (!user) {
+    user = await createUserFromContact(contact);
+    isNewUser = true;
+  }
 
   const { isFirstLogin } = await applyPostAuthFlags(user);
   const token = generateToken(user._id.toString());
-  return { token, user: toPublicUser(user), isFirstLogin };
+  return { token, user: toPublicUser(user), isFirstLogin: isNewUser || isFirstLogin, isNewUser };
 }
 
 async function applyPostAuthFlags(user) {
