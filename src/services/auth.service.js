@@ -45,6 +45,17 @@ function buildUniqueUsername(base) {
   return `${sanitized}_${crypto.randomBytes(3).toString("hex")}`;
 }
 
+function maskEmail(email) {
+  const value = String(email || "").trim();
+  const atIndex = value.indexOf("@");
+  if (atIndex <= 0) return null;
+  const local = value.slice(0, atIndex);
+  const domain = value.slice(atIndex + 1);
+  if (!domain) return null;
+  const visible = local.slice(0, Math.min(2, local.length));
+  return `${visible}${"*".repeat(Math.max(1, local.length - visible.length))}@${domain}`;
+}
+
 async function sendOtp({ mobile, countryCode, email, purpose = "signup" }) {
   const normalizedMobile = normalizeMobile(mobile);
   const normalizedCountryCode = normalizeCountryCode(countryCode);
@@ -133,6 +144,8 @@ async function sendOtp({ mobile, countryCode, email, purpose = "signup" }) {
     countryCode: normalizedCountryCode,
     purpose: normalizedPurpose,
     expiresInMinutes: config.otpExpiryMinutes,
+    sentTo: maskEmail(deliveryEmail),
+    deliveryMethod: "email",
   };
 }
 
@@ -164,7 +177,10 @@ async function verifyOtp({ mobile, countryCode, email, otp, purpose = "signup" }
     throw new AppError("OTP expired. Please request a new one", 400);
   }
   if (record.otp !== normalizedOtp) {
-    throw new AppError("Invalid OTP", 401);
+    throw new AppError(
+      "Invalid OTP. Use the latest code sent to your registered email.",
+      401
+    );
   }
   if (normalizedPurpose === "signup" && record.email !== normalizedEmail) {
     throw new AppError("Email does not match the OTP request", 400);
