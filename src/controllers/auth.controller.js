@@ -37,4 +37,31 @@ async function login(req, res, next) {
   }
 }
 
-module.exports = { signup, login };
+async function sendOtp(req, res, next) {
+  try {
+    const { mobile, countryCode, email, purpose } = req.body;
+    if (!mobile || !countryCode) {
+      throw new AppError("Mobile and country code are required", 400);
+    }
+    const result = await authService.sendOtp({ mobile, countryCode, email, purpose });
+    success(res, result, "OTP sent successfully");
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function verifyOtp(req, res, next) {
+  try {
+    const { mobile, countryCode, email, otp, purpose } = req.body;
+    if (!mobile || !countryCode || !otp) {
+      throw new AppError("Mobile, country code and OTP are required", 400);
+    }
+    const result = await authService.verifyOtp({ mobile, countryCode, email, otp, purpose });
+    const message = purpose === "login" ? "Login successful" : "Signup successful";
+    success(res, result, message, purpose === "login" ? 200 : 201);
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { signup, login, sendOtp, verifyOtp };
