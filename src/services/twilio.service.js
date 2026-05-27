@@ -49,7 +49,15 @@ async function sendLoginOtpSms({ mobile, countryCode, otp }) {
   const to = formatE164(countryCode, mobile);
   if (!to) throw new AppError("Valid mobile and country code are required for SMS", 400);
 
-  return sendSms(to, `Your OTP for Login into Blosm is ${otp}`);
+  const minutes = config.otpExpiryMinutes || 10;
+  const body = [
+    "Blosm Hair & Beauty",
+    `Your sign-in code is ${otp}.`,
+    `Valid for ${minutes} minutes.`,
+    "Do not share this code with anyone.",
+  ].join(" ");
+
+  return sendSms(to, body);
 }
 
 async function sendAppointmentReceivedSms({ mobile, countryCode, name }) {
