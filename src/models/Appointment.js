@@ -18,9 +18,9 @@ const appointmentServiceSelectionSchema = new mongoose.Schema(
 const appointmentSchema = new mongoose.Schema(
   {
     userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
-    name: { type: String, required: true },
-    email: { type: String, required: true },
-    mobile: { type: String, required: true },
+    name: { type: String, default: null },
+    email: { type: String, default: null },
+    mobile: { type: String, default: null },
     countryCode: { type: String, default: "+61" },
     /** Display line for lists/search; multiple joined with " | ". */
     service: { type: String, required: true },

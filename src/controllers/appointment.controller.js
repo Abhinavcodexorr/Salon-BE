@@ -344,9 +344,6 @@ async function create(req, res, next) {
     if (!date) {
       throw new AppError("date is required", 400);
     }
-    if (!name || !email || !mobile) {
-      throw new AppError("Name, email, and mobile are required", 400);
-    }
 
     if (req.userId) {
       if (!mongoose.Types.ObjectId.isValid(String(req.userId))) {
@@ -359,9 +356,11 @@ async function create(req, res, next) {
     }
 
     // Contact fields on the appointment are the booking form only (may differ from User profile).
-    const bookingName = String(name).trim();
-    const bookingEmail = String(email).trim().toLowerCase();
-    const bookingMobile = String(mobile).replace(/\D/g, "");
+    const bookingName = name != null && String(name).trim() ? String(name).trim() : null;
+    const bookingEmail =
+      email != null && String(email).trim() ? String(email).trim().toLowerCase() : null;
+    const bookingMobile =
+      mobile != null && String(mobile).trim() ? String(mobile).replace(/\D/g, "") : null;
     const bookingCountryCode = countryCode || "+61";
 
     const hasMulti = Array.isArray(serviceSelectionsBody) && serviceSelectionsBody.length > 0;
@@ -528,17 +527,19 @@ async function create(req, res, next) {
     });
 
     try {
-      await sendAppointmentConfirmationEmail({
-        to: bookingEmail,
-        customerName: bookingName,
-        serviceTitle,
-        serviceSelections,
-        date,
-        timeRange: timeStart ? `${timeStart}${timeEnd ? ` - ${timeEnd}` : ""}` : "To be confirmed",
-        totalAmount,
-        notes: notes || "",
-        mobile: `${bookingCountryCode} ${bookingMobile}`,
-      });
+      if (bookingEmail) {
+        await sendAppointmentConfirmationEmail({
+          to: bookingEmail,
+          customerName: bookingName || "Customer",
+          serviceTitle,
+          serviceSelections,
+          date,
+          timeRange: timeStart ? `${timeStart}${timeEnd ? ` - ${timeEnd}` : ""}` : "To be confirmed",
+          totalAmount,
+          notes: notes || "",
+          mobile: bookingMobile ? `${bookingCountryCode} ${bookingMobile}` : "",
+        });
+      }
     } catch (mailErr) {
       // Appointment should still be created even if email sending fails.
       console.error("Failed to send appointment confirmation email:", mailErr.message);
