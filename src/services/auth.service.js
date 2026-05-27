@@ -1,10 +1,12 @@
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const User = require("../models/User");
+const Otp = require("../models/Otp");
 const jwt = require("jsonwebtoken");
 const config = require("../config");
 const { AppError } = require("../middleware/errorHandler");
 const { toPublicUser } = require("../utils/userResponse");
+const { isTwilioConfigured, sendLoginOtpSms } = require("./twilio.service");
 
 const BCRYPT_ROUNDS = 10;
 const SIGNUP_WALLET = 100;
@@ -53,6 +55,41 @@ function parseContact({ email, mobile, countryCode }) {
 
 function generateInternalUsername() {
   return `u_${crypto.randomBytes(12).toString("hex")}`;
+}
+
+function buildOtpContactKey(contact) {
+  if (contact.type === "email") return `email:${contact.email}`;
+  return `mobile:${contact.countryCode}${contact.mobile}`;
+}
+
+function generateOtpCode() {
+  if (config.useStaticOtp) return config.staticOtp;
+  return String(crypto.randomInt(100000, 1000000));
+}
+
+async function storeOtp(contactKey, otp) {
+  const expiresAt = new Date(Date.now() + config.otpExpiryMinutes * 60 * 1000);
+  await Otp.findOneAndUpdate(
+    { contactKey },
+    { contactKey, otp, expiresAt },
+    { upsert: true, new: true, setDefaultsOnInsert: true }
+  );
+  return expiresAt;
+}
+
+async function verifyStoredOtp(contactKey, code) {
+  const record = await Otp.findOne({ contactKey }).select("+otp expiresAt");
+  if (!record) {
+    throw new AppError("OTP expired or not found. Please request a new one", 400);
+  }
+  if (record.expiresAt <= new Date()) {
+    await Otp.deleteOne({ _id: record._id });
+    throw new AppError("OTP expired. Please request a new one", 400);
+  }
+  if (record.otp !== code) {
+    throw new AppError("Invalid OTP", 401);
+  }
+  await Otp.deleteOne({ _id: record._id });
 }
 
 async function findUserByContact(contact) {
@@ -106,18 +143,49 @@ async function createUserFromContact(contact) {
 
 async function sendOtp({ email, mobile, countryCode }) {
   const contact = parseContact({ email, mobile, countryCode });
+  const contactKey = buildOtpContactKey(contact);
+  const otp = generateOtpCode();
+
+  if (config.useStaticOtp) {
+    return {
+      sentTo: contact.type === "email" ? contact.email : contact.mobile,
+      deliveryMethod: "static",
+    };
+  }
+
+  if (contact.type !== "mobile") {
+    throw new AppError("SMS OTP is only available for mobile sign-in", 400);
+  }
+  if (!isTwilioConfigured()) {
+    throw new AppError("Twilio SMS is not configured", 503);
+  }
+
+  await storeOtp(contactKey, otp);
+  await sendLoginOtpSms({
+    mobile: contact.mobile,
+    countryCode: contact.countryCode,
+    otp,
+  });
 
   return {
-    sentTo: contact.type === "email" ? contact.email : contact.mobile,
+    sentTo: contact.mobile,
+    deliveryMethod: "sms",
+    expiresInMinutes: config.otpExpiryMinutes,
   };
 }
 
 async function verifyOtp({ email, mobile, countryCode, otp }) {
   const contact = parseContact({ email, mobile, countryCode });
   const code = String(otp || "").trim();
+  const contactKey = buildOtpContactKey(contact);
 
   if (!code) throw new AppError("OTP is required", 400);
-  if (code !== config.staticOtp) throw new AppError("Invalid OTP", 401);
+
+  if (config.useStaticOtp) {
+    if (code !== config.staticOtp) throw new AppError("Invalid OTP", 401);
+  } else {
+    await verifyStoredOtp(contactKey, code);
+  }
 
   let user = await findUserByContact(contact);
   let isNewUser = false;

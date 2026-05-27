@@ -7,6 +7,10 @@ const { AppError } = require("../middleware/errorHandler");
 const { success } = require("../utils/response");
 const { sendAppointmentConfirmationEmail } = require("../services/gmail.service");
 const {
+  isTwilioConfigured,
+  sendAppointmentReceivedSms,
+} = require("../services/twilio.service");
+const {
   generateSlots,
   parseTimeToMinutes,
   minutesToTimeStr,
@@ -543,6 +547,18 @@ async function create(req, res, next) {
     } catch (mailErr) {
       // Appointment should still be created even if email sending fails.
       console.error("Failed to send appointment confirmation email:", mailErr.message);
+    }
+
+    try {
+      if (bookingMobile && isTwilioConfigured()) {
+        await sendAppointmentReceivedSms({
+          mobile: bookingMobile,
+          countryCode: bookingCountryCode,
+          name: bookingName,
+        });
+      }
+    } catch (smsErr) {
+      console.error("Failed to send appointment confirmation SMS:", smsErr.message);
     }
 
     if (req.userId) {
