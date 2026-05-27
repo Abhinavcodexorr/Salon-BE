@@ -66,12 +66,41 @@ async function findUserByContact(contact) {
     );
   }
 
-  return User.findOne({
+  const byMobileAndCode = await User.findOne({
     mobile: contact.mobile,
     countryCode: contact.countryCode,
   }).select(
     "username email mobile countryCode name wallet isFirstLoginPending canRedeemInviteCode referredBy referredInviteCode referralRedeemedAt"
   );
+
+  if (byMobileAndCode) return byMobileAndCode;
+
+  return User.findOne({ mobile: contact.mobile }).select(
+    "username email mobile countryCode name wallet isFirstLoginPending canRedeemInviteCode referredBy referredInviteCode referralRedeemedAt"
+  );
+}
+
+async function sendOtp({ email, mobile, countryCode }) {
+  const contact = parseContact({ email, mobile, countryCode });
+
+  return {
+    sentTo: contact.type === "email" ? contact.email : contact.mobile,
+  };
+}
+
+async function verifyOtp({ email, mobile, countryCode, otp }) {
+  const contact = parseContact({ email, mobile, countryCode });
+  const code = String(otp || "").trim();
+
+  if (!code) throw new AppError("OTP is required", 400);
+  if (code !== config.staticOtp) throw new AppError("Invalid OTP", 401);
+
+  const user = await findUserByContact(contact);
+  if (!user) throw new AppError("No account found", 404);
+
+  const { isFirstLogin } = await applyPostAuthFlags(user);
+  const token = generateToken(user._id.toString());
+  return { token, user: toPublicUser(user), isFirstLogin };
 }
 
 async function applyPostAuthFlags(user) {
@@ -90,85 +119,6 @@ async function applyPostAuthFlags(user) {
   }
 
   return { isFirstLogin };
-}
-
-async function sendOtp({ email, mobile, countryCode, purpose = "login" }) {
-  const contact = parseContact({ email, mobile, countryCode });
-  const isLogin = purpose === "login";
-  const user = await findUserByContact(contact);
-
-  if (isLogin && !user) {
-    throw new AppError("No account found", 404);
-  }
-
-  if (!isLogin && user) {
-    throw new AppError("Account already exists", 409);
-  }
-
-  return {
-    purpose: isLogin ? "login" : "signup",
-    sentTo: contact.type === "email" ? contact.email : contact.mobile,
-  };
-}
-
-async function verifyOtp({ email, mobile, countryCode, otp, purpose = "login" }) {
-  const contact = parseContact({ email, mobile, countryCode });
-  const code = String(otp || "").trim();
-  const isLogin = purpose === "login";
-
-  if (!code) throw new AppError("OTP is required", 400);
-  if (code !== config.staticOtp) throw new AppError("Invalid OTP", 401);
-
-  if (isLogin) {
-    const user = await findUserByContact(contact);
-    if (!user) throw new AppError("No account found", 404);
-
-    const { isFirstLogin } = await applyPostAuthFlags(user);
-    const token = generateToken(user._id.toString());
-    return { token, user: toPublicUser(user), isFirstLogin };
-  }
-
-  const signupEmail = normalizeEmail(email);
-  const signupMobile = normalizeMobile(mobile);
-  const signupCountryCode = normalizeCountryCode(countryCode);
-
-  if (!signupEmail || !signupMobile || !signupCountryCode) {
-    throw new AppError("Email, mobile and country code are required for signup", 400);
-  }
-
-  const existing = await User.findOne({
-    $or: [
-      { email: signupEmail },
-      { mobile: signupMobile, countryCode: signupCountryCode },
-    ],
-  }).select("_id email mobile countryCode");
-
-  if (existing) {
-    if (existing.email === signupEmail) {
-      throw new AppError("Email is already registered", 409);
-    }
-    throw new AppError("Mobile number is already registered", 409);
-  }
-
-  const username = buildUniqueUsername(signupEmail.split("@")[0]);
-  const hashedPassword = await bcrypt.hash(crypto.randomBytes(16).toString("hex"), BCRYPT_ROUNDS);
-
-  const user = await User.create({
-    username,
-    email: signupEmail,
-    password: hashedPassword,
-    mobile: signupMobile,
-    countryCode: signupCountryCode,
-    name: username,
-    wallet: SIGNUP_WALLET,
-    isFirstLoginPending: true,
-    canRedeemInviteCode: true,
-  });
-
-  const { isFirstLogin } = await applyPostAuthFlags(user);
-  const token = generateToken(user._id.toString());
-
-  return { token, user: toPublicUser(user), isFirstLogin };
 }
 
 async function signup({ username, email, mobile, countryCode, password }) {

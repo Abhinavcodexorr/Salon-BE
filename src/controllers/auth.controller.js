@@ -39,7 +39,7 @@ async function login(req, res, next) {
 
 async function sendOtp(req, res, next) {
   try {
-    const { email, mobile, countryCode, purpose } = req.body;
+    const { email, mobile, countryCode } = req.body;
     const hasEmail = Boolean(String(email || "").trim());
     const hasMobile = Boolean(String(mobile || "").trim());
 
@@ -50,7 +50,7 @@ async function sendOtp(req, res, next) {
       throw new AppError("Country code is required with mobile", 400);
     }
 
-    const result = await authService.sendOtp({ email, mobile, countryCode, purpose });
+    const result = await authService.sendOtp({ email, mobile, countryCode });
     success(res, result, "OTP sent successfully");
   } catch (err) {
     next(err);
@@ -59,26 +59,20 @@ async function sendOtp(req, res, next) {
 
 async function verifyOtp(req, res, next) {
   try {
-    const { email, mobile, countryCode, otp, purpose } = req.body;
+    const { email, mobile, countryCode, otp } = req.body;
     const hasEmail = Boolean(String(email || "").trim());
     const hasMobile = Boolean(String(mobile || "").trim());
-    const isSignup = purpose === "signup";
 
     if (!otp) throw new AppError("OTP is required", 400);
-
-    if (isSignup) {
-      if (!email || !mobile || !countryCode) {
-        throw new AppError("Email, mobile and country code are required for signup", 400);
-      }
-    } else if (!hasEmail && !hasMobile) {
+    if (!hasEmail && !hasMobile) {
       throw new AppError("Email or mobile is required", 400);
-    } else if (hasMobile && !countryCode) {
+    }
+    if (hasMobile && !countryCode) {
       throw new AppError("Country code is required with mobile", 400);
     }
 
-    const result = await authService.verifyOtp({ email, mobile, countryCode, otp, purpose });
-    const message = isSignup ? "Signup successful" : "Login successful";
-    success(res, result, message, isSignup ? 201 : 200);
+    const result = await authService.verifyOtp({ email, mobile, countryCode, otp });
+    success(res, result, "Login successful");
   } catch (err) {
     next(err);
   }
