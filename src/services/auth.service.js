@@ -51,9 +51,8 @@ function parseContact({ email, mobile, countryCode }) {
   throw new AppError("Email or mobile with country code is required", 400);
 }
 
-function internalUsernameFromContact(contact) {
-  if (contact.type === "email") return contact.email;
-  return `${contact.countryCode}${contact.mobile}`;
+function generateInternalUsername() {
+  return `u_${crypto.randomBytes(12).toString("hex")}`;
 }
 
 async function findUserByContact(contact) {
@@ -79,7 +78,7 @@ async function findUserByContact(contact) {
 
 async function createUserFromContact(contact) {
   const hashedPassword = await bcrypt.hash(crypto.randomBytes(16).toString("hex"), BCRYPT_ROUNDS);
-  const username = internalUsernameFromContact(contact);
+  const username = generateInternalUsername();
 
   if (contact.type === "email") {
     return User.create({

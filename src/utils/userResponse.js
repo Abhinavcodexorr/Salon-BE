@@ -1,6 +1,6 @@
 /**
  * Public user shape for auth + profile APIs (matches frontend LoginModalContext).
- * Always includes wallet as a number. Never exposes password.
+ * Never exposes internal username or password.
  */
 function toPublicUser(user) {
   if (!user) return null;
@@ -9,7 +9,6 @@ function toPublicUser(user) {
 
   return {
     _id: u._id,
-    username: u.username ?? null,
     mobile: u.mobile ?? null,
     countryCode: u.countryCode ?? null,
     name,
