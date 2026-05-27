@@ -120,6 +120,7 @@ async function updateMe(req, res, next) {
       const trimmedName = String(name).trim();
       if (!trimmedName) throw new AppError("Name cannot be empty", 400);
       updates.name = trimmedName;
+      updates.isFirstLoginPending = false;
     }
 
     if (email !== undefined) {

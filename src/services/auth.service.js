@@ -31,14 +31,6 @@ function generateToken(userId) {
   return jwt.sign({ userId }, config.jwtSecret, { expiresIn: config.jwtExpiry });
 }
 
-function buildUniqueUsername(base) {
-  const sanitized = String(base || "user")
-    .trim()
-    .replace(/[^a-zA-Z0-9._-]/g, "")
-    .slice(0, 30) || "user";
-  return `${sanitized}_${crypto.randomBytes(3).toString("hex")}`;
-}
-
 function parseContact({ email, mobile, countryCode }) {
   const normalizedEmail = normalizeEmail(email);
   const normalizedMobile = normalizeMobile(mobile);
@@ -57,6 +49,11 @@ function parseContact({ email, mobile, countryCode }) {
   }
 
   throw new AppError("Email or mobile with country code is required", 400);
+}
+
+function internalUsernameFromContact(contact) {
+  if (contact.type === "email") return contact.email;
+  return `${contact.countryCode}${contact.mobile}`;
 }
 
 async function findUserByContact(contact) {
@@ -82,44 +79,26 @@ async function findUserByContact(contact) {
 
 async function createUserFromContact(contact) {
   const hashedPassword = await bcrypt.hash(crypto.randomBytes(16).toString("hex"), BCRYPT_ROUNDS);
+  const username = internalUsernameFromContact(contact);
 
   if (contact.type === "email") {
-    const numericSeed = parseInt(
-      crypto.createHash("sha256").update(contact.email).digest("hex").slice(0, 12),
-      16
-    );
-    let placeholderMobile = String(numericSeed).slice(-10).padStart(10, "9");
-    const countryCode = "+61";
-
-    while (await User.exists({ mobile: placeholderMobile, countryCode })) {
-      placeholderMobile = String(Date.now()).slice(-10);
-    }
-
-    const username = buildUniqueUsername(contact.email.split("@")[0]);
-
     return User.create({
       username,
       email: contact.email,
       password: hashedPassword,
-      mobile: placeholderMobile,
-      countryCode,
-      name: username,
+      name: null,
       wallet: SIGNUP_WALLET,
       isFirstLoginPending: true,
       canRedeemInviteCode: true,
     });
   }
 
-  const email = `${contact.mobile}.${contact.countryCode.replace("+", "")}@phone.blosm.app`;
-  const username = buildUniqueUsername(`user${contact.mobile.slice(-4)}`);
-
   return User.create({
     username,
-    email,
-    password: hashedPassword,
     mobile: contact.mobile,
     countryCode: contact.countryCode,
-    name: username,
+    password: hashedPassword,
+    name: null,
     wallet: SIGNUP_WALLET,
     isFirstLoginPending: true,
     canRedeemInviteCode: true,
@@ -151,18 +130,22 @@ async function verifyOtp({ email, mobile, countryCode, otp }) {
 
   const { isFirstLogin } = await applyPostAuthFlags(user);
   const token = generateToken(user._id.toString());
-  return { token, user: toPublicUser(user), isFirstLogin: isNewUser || isFirstLogin, isNewUser };
+
+  return {
+    token,
+    user: toPublicUser(user),
+    isFirstLogin,
+    isNewUser,
+  };
 }
 
 async function applyPostAuthFlags(user) {
-  const isFirstLogin = Boolean(user.isFirstLoginPending);
+  const needsName = !user.name || !String(user.name).trim();
+  const isFirstLogin = needsName || Boolean(user.isFirstLoginPending);
 
-  if (isFirstLogin) {
-    await User.updateOne(
-      { _id: user._id, isFirstLoginPending: true },
-      { $set: { isFirstLoginPending: false } }
-    );
-  } else if (user.canRedeemInviteCode) {
+  if (!needsName && user.isFirstLoginPending) {
+    await User.updateOne({ _id: user._id }, { $set: { isFirstLoginPending: false } });
+  } else if (!needsName && user.canRedeemInviteCode) {
     await User.updateOne(
       { _id: user._id, canRedeemInviteCode: true },
       { $set: { canRedeemInviteCode: false } }
