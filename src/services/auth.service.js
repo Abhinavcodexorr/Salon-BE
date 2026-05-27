@@ -6,6 +6,7 @@ const jwt = require("jsonwebtoken");
 const config = require("../config");
 const { AppError } = require("../middleware/errorHandler");
 const { toPublicUser } = require("../utils/userResponse");
+const { sendOtpEmail, hasGmailEnvConfigured } = require("./gmail.service");
 
 const BCRYPT_ROUNDS = 10;
 const SIGNUP_WALLET = 100;
@@ -33,8 +34,7 @@ function generateToken(userId) {
 }
 
 function generateOtpCode() {
-  if (config.useStaticOtp) return config.staticOtp;
-  return String(Math.floor(100000 + Math.random() * 900000));
+  return String(crypto.randomInt(100000, 1000000));
 }
 
 function buildUniqueUsername(base) {
@@ -56,6 +56,8 @@ async function sendOtp({ mobile, countryCode, email, purpose = "signup" }) {
   }
   if (!normalizedCountryCode) throw new AppError("Country code is required", 400);
 
+  let deliveryEmail = null;
+
   if (normalizedPurpose === "signup") {
     if (!normalizedEmail) throw new AppError("Email is required", 400);
 
@@ -72,15 +74,27 @@ async function sendOtp({ mobile, countryCode, email, purpose = "signup" }) {
       }
       throw new AppError("Mobile number is already registered", 409);
     }
+
+    deliveryEmail = normalizedEmail;
   } else {
     const existingUser = await User.findOne({
       mobile: normalizedMobile,
       countryCode: normalizedCountryCode,
-    }).select("_id");
+    }).select("_id email");
 
     if (!existingUser) {
       throw new AppError("No account found with this mobile number", 404);
     }
+
+    deliveryEmail = existingUser.email;
+  }
+
+  if (!deliveryEmail) {
+    throw new AppError("Unable to deliver OTP for this account", 400);
+  }
+
+  if (!hasGmailEnvConfigured()) {
+    throw new AppError("OTP email delivery is not configured", 503);
   }
 
   const otp = generateOtpCode();
@@ -101,8 +115,17 @@ async function sendOtp({ mobile, countryCode, email, purpose = "signup" }) {
     expiresAt,
   });
 
-  if (config.nodeEnv === "development" && config.useStaticOtp) {
-    console.log(`[OTP] ${normalizedPurpose} for ${normalizedCountryCode} ${normalizedMobile}: ${otp}`);
+  await sendOtpEmail({
+    to: deliveryEmail,
+    otp,
+    purpose: normalizedPurpose,
+    expiresInMinutes: config.otpExpiryMinutes,
+  });
+
+  if (config.nodeEnv === "development" && config.otpLogToConsole) {
+    console.log(
+      `[OTP] ${normalizedPurpose} sent to ${deliveryEmail} for ${normalizedCountryCode} ${normalizedMobile}`
+    );
   }
 
   return {
