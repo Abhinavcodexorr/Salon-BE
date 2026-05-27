@@ -9,6 +9,5 @@ module.exports = {
   reminderHoursBefore: Math.max(1, Number(process.env.BOOKING_REMINDER_HOURS_BEFORE) || 2),
   reminderCronEnabled: process.env.BOOKING_REMINDER_CRON_ENABLED !== "false",
   reminderCronSchedule: process.env.BOOKING_REMINDER_CRON_SCHEDULE || "*/5 * * * *",
-  otpLogToConsole: process.env.OTP_LOG_TO_CONSOLE === "true",
-  otpExpiryMinutes: Math.max(1, Number(process.env.OTP_EXPIRY_MINUTES) || 10),
+  staticOtp: process.env.STATIC_OTP || "123456",
 };

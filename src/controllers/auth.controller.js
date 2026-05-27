@@ -39,11 +39,18 @@ async function login(req, res, next) {
 
 async function sendOtp(req, res, next) {
   try {
-    const { mobile, countryCode, email, purpose } = req.body;
-    if (!mobile || !countryCode) {
-      throw new AppError("Mobile and country code are required", 400);
+    const { email, mobile, countryCode, purpose } = req.body;
+    const hasEmail = Boolean(String(email || "").trim());
+    const hasMobile = Boolean(String(mobile || "").trim());
+
+    if (!hasEmail && !hasMobile) {
+      throw new AppError("Email or mobile is required", 400);
     }
-    const result = await authService.sendOtp({ mobile, countryCode, email, purpose });
+    if (hasMobile && !countryCode) {
+      throw new AppError("Country code is required with mobile", 400);
+    }
+
+    const result = await authService.sendOtp({ email, mobile, countryCode, purpose });
     success(res, result, "OTP sent successfully");
   } catch (err) {
     next(err);
@@ -52,13 +59,26 @@ async function sendOtp(req, res, next) {
 
 async function verifyOtp(req, res, next) {
   try {
-    const { mobile, countryCode, email, otp, purpose } = req.body;
-    if (!mobile || !countryCode || !otp) {
-      throw new AppError("Mobile, country code and OTP are required", 400);
+    const { email, mobile, countryCode, otp, purpose } = req.body;
+    const hasEmail = Boolean(String(email || "").trim());
+    const hasMobile = Boolean(String(mobile || "").trim());
+    const isSignup = purpose === "signup";
+
+    if (!otp) throw new AppError("OTP is required", 400);
+
+    if (isSignup) {
+      if (!email || !mobile || !countryCode) {
+        throw new AppError("Email, mobile and country code are required for signup", 400);
+      }
+    } else if (!hasEmail && !hasMobile) {
+      throw new AppError("Email or mobile is required", 400);
+    } else if (hasMobile && !countryCode) {
+      throw new AppError("Country code is required with mobile", 400);
     }
-    const result = await authService.verifyOtp({ mobile, countryCode, email, otp, purpose });
-    const message = purpose === "login" ? "Login successful" : "Signup successful";
-    success(res, result, message, purpose === "login" ? 200 : 201);
+
+    const result = await authService.verifyOtp({ email, mobile, countryCode, otp, purpose });
+    const message = isSignup ? "Signup successful" : "Login successful";
+    success(res, result, message, isSignup ? 201 : 200);
   } catch (err) {
     next(err);
   }

@@ -372,83 +372,6 @@ function getGmailAuthorizationUrl(overrideRedirectUri) {
   });
 }
 
-async function sendPlainEmail({ to, subject, plainText, html }) {
-  if (!hasGmailEnvConfigured()) {
-    throw new AppError("Email delivery is not configured", 503);
-  }
-
-  const oauth2Client = getOAuth2Client();
-  oauth2Client.setCredentials({
-    refresh_token: process.env.GMAIL_REFRESH_TOKEN,
-  });
-
-  const gmail = google.gmail({ version: "v1", auth: oauth2Client });
-  const safeHtml = html || `<div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.6;color:#111827;">${escapeHtml(plainText).replace(/\n/g, "<br/>")}</div>`;
-
-  const message = [
-    `From: Blosm Hair & Beauty <${process.env.GMAIL_SENDER_EMAIL}>`,
-    `To: ${to}`,
-    `Subject: ${subject}`,
-    "MIME-Version: 1.0",
-    'Content-Type: multipart/alternative; boundary="blosm_otp_boundary"',
-    "",
-    "--blosm_otp_boundary",
-    "Content-Type: text/plain; charset=UTF-8",
-    "",
-    plainText,
-    "",
-    "--blosm_otp_boundary",
-    "Content-Type: text/html; charset=UTF-8",
-    "",
-    safeHtml,
-    "",
-    "--blosm_otp_boundary--",
-  ].join("\n");
-
-  await gmail.users.messages.send({
-    userId: "me",
-    requestBody: { raw: toBase64Url(message) },
-  });
-
-  return { sent: true };
-}
-
-async function sendOtpEmail({ to, otp, purpose, expiresInMinutes }) {
-  const actionLabel = purpose === "login" ? "sign in" : "complete your signup";
-  const subject = `Your Blosm verification code: ${otp}`;
-  const plainText = [
-    "Hi,",
-    "",
-    `Use this one-time code to ${actionLabel}:`,
-    "",
-    otp,
-    "",
-    `This code expires in ${expiresInMinutes} minutes.`,
-    "If you did not request this code, you can ignore this email.",
-    "",
-    "This is a no-reply email. Please do not reply to this message.",
-    `© ${new Date().getFullYear()} BLOSM. All rights reserved.`,
-  ].join("\n");
-
-  const html = `
-    <div style="font-family:Arial,sans-serif;background:#f9fafb;padding:24px;">
-      <div style="max-width:520px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:12px;padding:28px;">
-        <h1 style="margin:0 0 12px 0;font-size:22px;color:#111827;">Verification code</h1>
-        <p style="margin:0 0 18px 0;font-size:14px;line-height:1.6;color:#4b5563;">
-          Use this one-time code to ${escapeHtml(actionLabel)}:
-        </p>
-        <div style="display:inline-block;padding:14px 18px;background:#f3f4f6;border-radius:8px;font-size:28px;font-weight:700;letter-spacing:6px;color:#111827;">
-          ${escapeHtml(otp)}
-        </div>
-        <p style="margin:18px 0 0 0;font-size:13px;line-height:1.6;color:#6b7280;">
-          This code expires in ${escapeHtml(String(expiresInMinutes))} minutes.
-        </p>
-      </div>
-    </div>`;
-
-  return sendPlainEmail({ to, subject, plainText, html });
-}
-
 async function exchangeGmailCodeForTokens(code, overrideRedirectUri) {
   if (!code || !String(code).trim()) {
     throw new AppError("Authorization code is required", 400);
@@ -461,7 +384,6 @@ async function exchangeGmailCodeForTokens(code, overrideRedirectUri) {
 module.exports = {
   sendAppointmentConfirmationEmail,
   sendAppointmentReminderEmail,
-  sendOtpEmail,
   buildAppointmentEmailTemplate,
   hasGmailEnvConfigured,
   getGmailAuthorizationUrl,
