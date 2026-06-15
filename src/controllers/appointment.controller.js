@@ -7,9 +7,9 @@ const { AppError } = require("../middleware/errorHandler");
 const { success } = require("../utils/response");
 const { sendAppointmentConfirmationEmail } = require("../services/gmail.service");
 const {
-  isNotifyreConfigured,
+  isSmsConfigured,
   sendAppointmentReceivedSms,
-} = require("../services/notifyre.service");
+} = require("../services/sms.service");
 const {
   generateSlots,
   parseTimeToMinutes,
@@ -550,7 +550,7 @@ async function create(req, res, next) {
     }
 
     try {
-      if (bookingMobile && isNotifyreConfigured()) {
+      if (bookingMobile && isSmsConfigured()) {
         await sendAppointmentReceivedSms({
           mobile: bookingMobile,
           countryCode: bookingCountryCode,

@@ -6,7 +6,7 @@ const jwt = require("jsonwebtoken");
 const config = require("../config");
 const { AppError } = require("../middleware/errorHandler");
 const { toPublicUser } = require("../utils/userResponse");
-const { isNotifyreConfigured, sendLoginOtpSms } = require("./notifyre.service");
+const { isSmsConfigured, sendLoginOtpSms } = require("./sms.service");
 
 const BCRYPT_ROUNDS = 10;
 const SIGNUP_WALLET = 100;
@@ -156,8 +156,8 @@ async function sendOtp({ email, mobile, countryCode }) {
   if (contact.type !== "mobile") {
     throw new AppError("SMS OTP is only available for mobile sign-in", 400);
   }
-  if (!isNotifyreConfigured()) {
-    throw new AppError("Notifyre SMS is not configured", 503);
+  if (!isSmsConfigured()) {
+    throw new AppError("SMS is not configured", 503);
   }
 
   await storeOtp(contactKey, otp);
