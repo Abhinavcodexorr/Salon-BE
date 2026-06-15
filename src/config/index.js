@@ -15,4 +15,7 @@ module.exports = {
   twilioAccountSid: process.env.TWILIO_ACCOUNT_SID || "",
   twilioAuthToken: process.env.TWILIO_AUTH_TOKEN || "",
   twilioFromNumber: process.env.TWILIO_FROM_NUMBER || "",
+  notifyreApiToken: process.env.NOTIFYRE_API_TOKEN || "",
+  notifyreFromNumber: process.env.NOTIFYRE_FROM_NUMBER || "",
+  notifyreCampaignName: process.env.NOTIFYRE_CAMPAIGN_NAME || "Blosm",
 };
