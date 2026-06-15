@@ -15,18 +15,46 @@ function formatE164(countryCode, mobile) {
   return `${normalizedCode}${digits}`;
 }
 
-async function sendSms(to, body) {
+function toRecipients(numbers) {
+  const list = Array.isArray(numbers) ? numbers : [numbers];
+  return list
+    .map((number) => String(number || "").trim())
+    .filter(Boolean)
+    .map((value) => ({ type: "mobile_number", value }));
+}
+
+/**
+ * Build payload for POST /sms/send per Notifyre API.
+ * Shared sender (+61480099198): leave From empty — Notifyre assigns it.
+ */
+function buildSendSmsPayload(body, to, options = {}) {
+  const payload = {
+    Body: body,
+    Recipients: toRecipients(to),
+    From: config.notifyreFromNumber || "",
+    AddUnsubscribeLink: options.addUnsubscribeLink ?? config.notifyreAddUnsubscribeLink,
+    CampaignName: options.campaignName || config.notifyreCampaignName,
+  };
+
+  if (options.scheduledDate != null) {
+    payload.ScheduledDate = options.scheduledDate;
+  }
+  if (options.callbackUrl || config.notifyreCallbackUrl) {
+    payload.CallbackUrl = options.callbackUrl || config.notifyreCallbackUrl;
+  }
+  if (options.metadata && typeof options.metadata === "object") {
+    payload.Metadata = options.metadata;
+  }
+
+  return payload;
+}
+
+async function sendSms(to, body, options = {}) {
   if (!isNotifyreConfigured()) {
     throw new AppError("Notifyre SMS is not configured", 503);
   }
 
-  const payload = {
-    Body: body,
-    Recipients: [{ type: "mobile_number", value: to }],
-    From: config.notifyreFromNumber || "",
-    AddUnsubscribeLink: false,
-    CampaignName: config.notifyreCampaignName,
-  };
+  const payload = buildSendSmsPayload(body, to, options);
 
   const response = await fetch(NOTIFYRE_API_URL, {
     method: "POST",
@@ -62,7 +90,7 @@ async function sendLoginOtpSms({ mobile, countryCode, otp }) {
     "Do not share this code with anyone.",
   ].join(" ");
 
-  return sendSms(to, body);
+  return sendSms(to, body, { metadata: { type: "login_otp" } });
 }
 
 async function sendAppointmentReceivedSms({ mobile, countryCode, name }) {
@@ -72,12 +100,13 @@ async function sendAppointmentReceivedSms({ mobile, countryCode, name }) {
   const customerName = String(name || "Customer").trim() || "Customer";
   const body = `Hi ${customerName}, your appointment request has been received by Blosm Hair & Beauty. We'll confirm shortly.`;
 
-  return sendSms(to, body);
+  return sendSms(to, body, { metadata: { type: "appointment_received" } });
 }
 
 module.exports = {
   isNotifyreConfigured,
   formatE164,
+  buildSendSmsPayload,
   sendSms,
   sendLoginOtpSms,
   sendAppointmentReceivedSms,

@@ -17,4 +17,6 @@ module.exports = {
   notifyreApiToken: process.env.NOTIFYRE_API_TOKEN || "",
   notifyreFromNumber: process.env.NOTIFYRE_FROM_NUMBER || "",
   notifyreCampaignName: process.env.NOTIFYRE_CAMPAIGN_NAME || "Blosm",
+  notifyreCallbackUrl: process.env.NOTIFYRE_CALLBACK_URL || "",
+  notifyreAddUnsubscribeLink: process.env.NOTIFYRE_ADD_UNSUBSCRIBE_LINK === "true",
 };
