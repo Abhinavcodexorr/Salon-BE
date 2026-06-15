@@ -9,9 +9,13 @@ function isNotifyreConfigured() {
 
 function formatE164(countryCode, mobile) {
   const code = String(countryCode || "").trim();
-  const digits = String(mobile || "").replace(/\D/g, "");
+  let digits = String(mobile || "").replace(/\D/g, "");
   if (!code || !digits) return null;
   const normalizedCode = code.startsWith("+") ? code : `+${code.replace(/\D/g, "")}`;
+  const cc = normalizedCode.replace(/\D/g, "");
+  if (digits.startsWith("0") && ["61", "44", "64", "91"].includes(cc)) {
+    digits = digits.slice(1);
+  }
   return `${normalizedCode}${digits}`;
 }
 

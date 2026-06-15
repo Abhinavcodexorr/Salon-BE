@@ -19,8 +19,13 @@ function normalizeUsername(username) {
   return String(username || "").trim();
 }
 
-function normalizeMobile(mobile) {
-  return String(mobile || "").replace(/\D/g, "");
+function normalizeMobile(mobile, countryCode = "") {
+  let digits = String(mobile || "").replace(/\D/g, "");
+  const cc = normalizeCountryCode(countryCode).replace(/\D/g, "");
+  if (digits.startsWith("0") && ["61", "44", "64", "91"].includes(cc)) {
+    digits = digits.slice(1);
+  }
+  return digits;
 }
 
 function normalizeCountryCode(countryCode) {
@@ -35,8 +40,8 @@ function generateToken(userId) {
 
 function parseContact({ email, mobile, countryCode }) {
   const normalizedEmail = normalizeEmail(email);
-  const normalizedMobile = normalizeMobile(mobile);
   const normalizedCountryCode = normalizeCountryCode(countryCode);
+  const normalizedMobile = normalizeMobile(mobile, normalizedCountryCode);
 
   if (normalizedEmail) {
     return { type: "email", email: normalizedEmail };
@@ -147,9 +152,11 @@ async function sendOtp({ email, mobile, countryCode }) {
   const otp = generateOtpCode();
 
   if (config.useStaticOtp) {
+    await storeOtp(contactKey, otp);
     return {
       sentTo: contact.type === "email" ? contact.email : contact.mobile,
       deliveryMethod: "static",
+      expiresInMinutes: config.otpExpiryMinutes,
     };
   }
 
@@ -225,8 +232,8 @@ async function applyPostAuthFlags(user) {
 async function signup({ username, email, mobile, countryCode, password }) {
   const normalizedUsername = normalizeUsername(username);
   const normalizedEmail = normalizeEmail(email);
-  const normalizedMobile = normalizeMobile(mobile);
   const normalizedCountryCode = normalizeCountryCode(countryCode);
+  const normalizedMobile = normalizeMobile(mobile, normalizedCountryCode);
 
   if (!normalizedUsername) throw new AppError("Username is required", 400);
   if (!normalizedEmail) throw new AppError("Email is required", 400);

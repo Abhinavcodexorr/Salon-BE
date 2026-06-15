@@ -3,23 +3,35 @@ const mongoose = require("mongoose");
 const userSchema = new mongoose.Schema(
   {
     username: { type: String, required: true, trim: true },
-    email: { type: String, default: null, trim: true, lowercase: true },
+    email: { type: String, trim: true, lowercase: true },
     password: { type: String, required: true, select: false },
-    mobile: { type: String, default: null },
-    countryCode: { type: String, default: null },
-    name: { type: String, default: null },
+    mobile: { type: String, trim: true },
+    countryCode: { type: String, trim: true },
+    name: { type: String, trim: true },
     wallet: { type: Number, default: 0 },
     isFirstLoginPending: { type: Boolean, default: false },
     canRedeemInviteCode: { type: Boolean, default: false },
-    referredBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
-    referredInviteCode: { type: String, default: null },
-    referralRedeemedAt: { type: Date, default: null },
+    referredBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    referredInviteCode: { type: String, trim: true },
+    referralRedeemedAt: { type: Date },
   },
   { timestamps: true }
 );
 
-userSchema.index({ email: 1 }, { unique: true, sparse: true });
+userSchema.index(
+  { email: 1 },
+  { unique: true, partialFilterExpression: { email: { $type: "string" } } }
+);
 userSchema.index({ username: 1 }, { unique: true });
-userSchema.index({ mobile: 1, countryCode: 1 }, { unique: true, sparse: true });
+userSchema.index(
+  { mobile: 1, countryCode: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      mobile: { $type: "string" },
+      countryCode: { $type: "string" },
+    },
+  }
+);
 
 module.exports = mongoose.model("User", userSchema);
